@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🧭 Road Trip Europe – Juillet 2026</title>
+<style>
+:root {
+  --navy:   #16213e;
+  --navy2:  #0f3460;
+  --gold:   #c9a84c;
+  --gold2:  #f0c040;
+  --cream:  #faf6ef;
+  --light:  #f0ece2;
+  --green:  #2d9e6b;
+  --red:    #e05252;
+  --blue:   #2166ac;
+  --gray:   #888;
+  --white:  #ffffff;
+  --radius: 12px;
+  --shadow: 0 2px 14px rgba(0,0,0,0.1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--cream);color:#1a1a2e;min-height:100vh;padding-bottom:30px;}
+
+/* ── HEADER ──────────────────────────────────────────── */
+.header{background:var(--navy);padding:16px 16px 0;position:sticky;top:0;z-index:200;}
+.header h1{font-family:Georgia,serif;font-size:1.25rem;color:var(--gold);text-align:center;letter-spacing:1px;}
+.header .sub{font-size:0.7rem;color:rgba(255,255,255,0.5);text-align:center;margin:2px 0 12px;}
+.tabs{display:flex;overflow-x:auto;gap:0;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:10px 14px;font-size:0.75rem;font-weight:600;white-space:nowrap;cursor:pointer;color:rgba(255,255,255,0.5);border-bottom:3px solid transparent;transition:all .2s;flex-shrink:0;}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+/* ── CONTENT ─────────────────────────────────────────── */
+.content{padding:14px;}
+.section{display:none;animation:fadeIn .2s;}
+.section.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── ROUTE VISUAL ─────────────────────────────────────── */
+.route-wrap{background:var(--navy);border-radius:var(--radius);padding:16px;margin-bottom:14px;overflow-x:auto;}
+.route-title{color:var(--gold);font-family:Georgia,serif;font-size:0.85rem;margin-bottom:12px;letter-spacing:0.5px;}
+.route-line{display:flex;align-items:center;min-width:max-content;padding:4px 0;}
+.city-stop{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.city-stop .dot{width:10px;height:10px;border-radius:50%;background:var(--gold);border:2px solid white;flex-shrink:0;}
+.city-stop .cn{font-size:0.6rem;color:var(--cream);white-space:nowrap;}
+.city-stop .cd{font-size:0.52rem;color:rgba(255,255,255,0.4);}
+.route-seg{height:2px;background:rgba(201,168,76,0.35);flex:0 0 28px;margin-bottom:13px;}
+
+/* ── TABLE ───────────────────────────────────────────── */
+.table-scroll{overflow-x:auto;border-radius:var(--radius);box-shadow:var(--shadow);}
+.itin-tbl{width:100%;border-collapse:collapse;min-width:540px;background:white;}
+.itin-tbl th{background:var(--navy);color:var(--gold);padding:8px 6px;font-size:0.68rem;text-align:left;white-space:nowrap;}
+.itin-tbl td{padding:7px 6px;border-bottom:1px solid #f0ece4;font-size:0.76rem;vertical-align:middle;}
+.itin-tbl tr.sejour td{background:#f0f5ff;}
+.itin-tbl tr.sejour:nth-child(even) td{background:#e8f0ff;}
+.itin-tbl tr.trajet:nth-child(even) td{background:#faf9f7;}
+[contenteditable]{outline:none;}
+[contenteditable]:focus{background:#fff9e0;border-radius:4px;box-shadow:0 0 0 2px var(--gold);padding:1px 3px;}
+
+.paid-btn{display:inline-flex;align-items:center;justify-content:center;padding:3px 7px;border-radius:10px;border:none;font-size:0.62rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;}
+.paid-btn.oui{background:#d4edda;color:var(--green);}
+.paid-btn.non{background:#fdecea;color:var(--red);}
+
+.tbadge.flixbus{background:#e8f5e9;color:#1b5e20;cursor:pointer;}
+.tbadge.train{background:#e3f2fd;color:#1565c0;cursor:pointer;}
+.tbadge.avion{background:#fff3e0;color:#e65100;cursor:pointer;}
+.tbadge.bus{background:#f3e5f5;color:#6a1b9a;cursor:pointer;}
+.tbadge.voiture{background:#fce4ec;color:#880e4f;cursor:pointer;}
+.tbadge.other{background:#f5f5f5;color:#555;cursor:pointer;}
+.tbadge{transition:transform .1s;}
+.tbadge:active{transform:scale(0.92);}
+
+.del-btn{background:none;border:none;color:#ffbbbb;font-size:13px;cursor:pointer;padding:2px 4px;}
+.del-btn:active{color:var(--red);}
+
+.tbl-footer{background:var(--navy);color:white;font-size:0.75rem;}
+.tbl-footer td{padding:8px 6px;font-weight:600;border-bottom:none;}
+
+.add-row-btn{display:flex;align-items:center;gap:6px;padding:9px 14px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;margin-top:10px;}
+
+/* ── ADD FORM ────────────────────────────────────────── */
+.add-form{background:#f8f9ff;border-radius:var(--radius);padding:14px;margin-top:10px;border:2px dashed #c5cae9;display:none;}
+.add-form.open{display:block;}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.fg input,.fg select,.fg.full input{padding:8px;border:1px solid #ddd;border-radius:7px;font-size:0.78rem;background:white;width:100%;}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--gold);}
+.full{grid-column:1/-1;}
+.form-actions{display:flex;gap:8px;margin-top:10px;}
+.btn-ok{padding:8px 16px;background:var(--navy);color:white;border:none;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;}
+.btn-no{padding:8px 16px;background:#eee;color:#555;border:none;border-radius:8px;font-size:0.78rem;cursor:pointer;}
+
+/* ── BUDGET ──────────────────────────────────────────── */
+.budget-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.bstat{background:white;border-radius:var(--radius);padding:14px;text-align:center;box-shadow:var(--shadow);}
+.bstat .amt{font-size:1.4rem;font-weight:700;font-family:Georgia,serif;}
+.bstat .lbl{font-size:0.68rem;color:var(--gray);margin-top:3px;}
+.bstat.t .amt{color:var(--navy);}
+.bstat.p .amt{color:var(--green);}
+.bstat.r .amt{color:var(--red);}
+.bstat.n .amt{color:var(--blue);}
+.progress-bar{height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden;margin:6px 0;}
+.progress-fill{height:100%;background:var(--green);border-radius:4px;transition:width .4s;}
+.prog-label{font-size:0.68rem;color:var(--gray);text-align:right;}
+.budget-table{width:100%;border-collapse:collapse;background:white;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+.budget-table th{background:var(--navy);color:var(--gold);padding:8px 10px;font-size:0.7rem;text-align:left;}
+.budget-table td{padding:8px 10px;border-bottom:1px solid #f0ece4;font-size:0.78rem;}
+.budget-table tr:last-child td{border-bottom:none;}
+.budget-table .sub-total{font-weight:700;background:var(--light);}
+
+/* ── HOTELS / GARES CARDS ────────────────────────────── */
+.info-card{background:white;border-radius:var(--radius);margin-bottom:10px;box-shadow:var(--shadow);border-left:4px solid var(--gold);overflow:hidden;}
+.ic-header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:linear-gradient(90deg,rgba(22,33,62,0.04),transparent);}
+.ic-city{font-family:Georgia,serif;font-weight:bold;font-size:0.95rem;color:var(--navy);}
+.ic-dates{font-size:0.68rem;color:var(--gray);}
+.ic-body{padding:0 14px 12px;}
+.if{margin-bottom:8px;}
+.if label{display:block;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray);margin-bottom:3px;}
+.if-edit{display:block;width:100%;font-size:0.8rem;padding:7px 9px;background:var(--light);border-radius:7px;border:1px solid transparent;min-height:30px;outline:none;font-family:-apple-system,sans-serif;transition:border .2s;}
+.if-edit:focus{border-color:var(--gold);background:#fff9e0;}
+.if-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ic-paid-row{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-top:1px solid #f0ece4;background:#fafafa;}
+.ic-paid-lbl{font-size:0.75rem;color:#555;}
+.map-link{display:inline-flex;align-items:center;gap:4px;font-size:0.68rem;color:var(--navy);background:var(--light);border:none;border-radius:20px;padding:4px 10px;cursor:pointer;text-decoration:none;margin-top:6px;}
+.map-link:active{background:var(--gold);color:white;}
+
+/* ── CHECKLIST ───────────────────────────────────────── */
+.cl-cat{margin-bottom:14px;}
+.cl-cat h3{font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;color:white;background:var(--navy);padding:6px 12px;border-radius:7px;margin-bottom:8px;}
+.cl-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:white;border-radius:9px;margin-bottom:5px;box-shadow:0 1px 4px rgba(0,0,0,0.07);cursor:pointer;transition:background .2s;}
+.cl-item.done{background:#f0faf5;}
+.cl-check{width:20px;height:20px;border-radius:50%;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+.cl-item.done .cl-check{background:var(--green);border-color:var(--green);}
+.cl-check::after{content:'✓';color:white;font-size:11px;display:none;}
+.cl-item.done .cl-check::after{display:block;}
+.cl-text{font-size:0.82rem;flex:1;}
+.cl-item.done .cl-text{text-decoration:line-through;color:var(--gray);}
+.cl-prog{background:white;border-radius:var(--radius);padding:14px;margin-bottom:14px;box-shadow:var(--shadow);text-align:center;}
+.cl-prog .cnt{font-size:1.6rem;font-weight:700;font-family:Georgia,serif;color:var(--navy);}
+.cl-prog .sub{font-size:0.72rem;color:var(--gray);}
+
+/* ── SAVE TOAST ──────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;right:16px;background:var(--green);color:white;padding:7px 14px;border-radius:20px;font-size:0.7rem;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;}
+.toast.show{opacity:1;}
+.section-title{font-family:Georgia,serif;font-size:1rem;color:var(--navy);margin-bottom:12px;font-weight:bold;}
+/* ── PROGRAMME ───────────────────────────────────────── */
+.prog-card{background:white;border-radius:var(--radius);margin-bottom:8px;box-shadow:var(--shadow);overflow:hidden;}
+.prog-header{display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;user-select:none;-webkit-user-select:none;}
+.prog-header:active{background:#f9f6f0;}
+.prog-jour{display:inline-block;background:var(--navy);color:var(--gold);font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0;}
+.prog-flag{font-size:1rem;flex-shrink:0;}
+.prog-titre{font-family:Georgia,serif;font-weight:bold;font-size:0.9rem;color:var(--navy);flex:1;}
+.prog-date{font-size:0.62rem;color:var(--gray);white-space:nowrap;}
+.prog-arrow{font-size:0.9rem;color:var(--gold);flex-shrink:0;transition:transform .2s;}
+.prog-body{padding:0 14px 12px;border-top:1px solid #f0ece4;animation:fadeIn .15s;}
+.prog-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid #f8f5f0;}
+.prog-item:last-child{border-bottom:none;}
+.prog-time{font-size:0.65rem;color:var(--gold);font-weight:700;min-width:38px;padding-top:1px;flex-shrink:0;}
+.prog-icon{font-size:0.85rem;flex-shrink:0;}
+.prog-desc{font-size:0.78rem;color:#333;flex:1;line-height:1.35;}
+.prog-hotel-tag{display:flex;align-items:center;gap:6px;margin-top:8px;padding:6px 10px;background:#fff9e6;border-radius:7px;border-left:3px solid var(--gold);font-size:0.75rem;color:var(--navy);font-weight:600;}
+.prog-section-lbl{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray);margin-top:8px;margin-bottom:2px;font-weight:600;}
+.type-train{color:#1565c0;}
+.type-avion{color:#e65100;}
+.type-hotel{color:var(--green);}
+.type-visit{color:#333;}
+.type-food{color:#7b3f00;}
+.type-info{color:var(--gray);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧭 Road Trip Europe</h1>
+  <div class="sub">Juillet 2026 · 10 villes · 3 semaines</div>
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('itineraire',this)">🗺️ Itinéraire</div>
+    <div class="tab" onclick="showTab('hotels',this)">🏨 Hôtels</div>
+    <div class="tab" onclick="showTab('gares',this)">🚉 Gares</div>
+    <div class="tab" onclick="showTab('budget',this)">💰 Budget</div>
+    <div class="tab" onclick="showTab('checklist',this)">✅ Checklist</div>
+    <div class="tab" onclick="showTab('programme',this)">📅 Jours</div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ═══ ITINÉRAIRE ═══════════════════════════════════ -->
+  <div class="section active" id="sec-itineraire">
+
+    <div class="route-wrap">
+      <div class="route-title">📍 Route complète</div>
+      <div class="route-line" id="routeViz"></div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="itin-tbl">
+        <thead>
+          <tr>
+            <th>Étape</th>
+            <th>Transport</th>
+            <th>Départ</th>
+            <th>Arrivée</th>
+            <th>Date</th>
+            <th>Notes / Horaires</th>
+            <th>Montant €</th>
+            <th>Payé ?</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="itin-tbody"></tbody>
+        <tfoot id="itin-tfoot"></tfoot>
+      </table>
+    </div>
+
+    <button class="add-row-btn" onclick="toggleAddForm()">＋ Ajouter une étape</button>
+
+    <div class="add-form" id="addForm">
+      <div class="fg">
+        <div class="full"><input id="f-nom" placeholder="Nom de l'étape (ex: Paris → Lyon)"></div>
+        <select id="f-transport">
+          <option>Train</option><option>FlixBus</option><option>Avion</option><option>Bus</option>
+          <option>Voiture</option><option>-</option>
+        </select>
+        <input id="f-date" placeholder="Date (ex: 12/07)">
+        <input id="f-depart" placeholder="Départ">
+        <input id="f-arrivee" placeholder="Arrivée">
+        <input id="f-notes" placeholder="Notes / horaires">
+        <input id="f-montant" placeholder="Montant €" type="number">
+        <select id="f-type"><option value="trajet">Trajet</option><option value="sejour">Séjour</option></select>
+      </div>
+      <div class="form-actions">
+        <button class="btn-ok" onclick="addRow()">Ajouter</button>
+        <button class="btn-no" onclick="toggleAddForm()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ HÔTELS ════════════════════════════════════════ -->
+  <div class="section" id="sec-hotels">
+    <div class="section-title">🏨 Hébergements</div>
+    <div id="hotels-list"></div>
+  </div>
+
+  <!-- ═══ GARES ═════════════════════════════════════════ -->
+  <div class="section" id="sec-gares">
+    <div class="section-title">🚉 Gares &amp; Aéroports</div>
+    <div id="gares-list"></div>
+  </div>
+
+  <!-- ═══ BUDGET ════════════════════════════════════════ -->
+  <div class="section" id="sec-budget">
+    <div class="section-title">💰 Budget</div>
+    <div class="budget-grid" id="budget-stats"></div>
+    <div style="background:white;border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);">
+      <div id="budget-prog"></div>
+    </div>
+    <br>
+    <table class="budget-table">
+      <thead><tr><th>Catégorie</th><th>Total</th><th>Payé</th><th>Reste</th></tr></thead>
+      <tbody id="budget-rows"></tbody>
+    </table>
+  </div>
+
+  <!-- ═══ PROGRAMME JOURNALIER ════════════════════════ -->
+  <div class="section" id="sec-programme">
+    <div class="section-title">📅 Programme jour par jour</div>
+    <div id="programme-list"></div>
+  </div>
+
+  <!-- ═══ CHECKLIST ════════════════════════════════════ -->
+  <div class="section" id="sec-checklist">
+    <div class="cl-prog">
+      <div class="cnt" id="cl-count">0 / 0</div>
+      <div class="sub">éléments cochés</div>
+      <div class="progress-bar" style="margin-top:10px;"><div class="progress-fill" id="cl-bar" style="width:0%"></div></div>
+    </div>
+    <div id="checklist-list"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">💾 Sauvegardé</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   DONNÉES PAR DÉFAUT
+══════════════════════════════════════════════════════════ */
+const DEFAULT = {
+  itinerary: [
+    {id:1, nom:"Brest → Bruxelles",      transport:"Train",  depart:"Brest",      arrivee:"Bruxelles",   date:"12/07",    notes:"11h15 → 17h47", montant:"",    paye:false, type:"trajet"},
+    {id:2, nom:"Bruxelles séjour",         transport:"-",      depart:"-",          arrivee:"-",           date:"12-14/07", notes:"",              montant:"170", paye:false, type:"sejour"},
+    {id:3, nom:"Bruxelles → Luxembourg",  transport:"Train",  depart:"Bruxelles",  arrivee:"Luxembourg",  date:"14/07",    notes:"7h33 → 10h49",  montant:"",    paye:false, type:"trajet"},
+    {id:4, nom:"Luxembourg séjour",        transport:"-",      depart:"-",          arrivee:"-",           date:"14-15/07", notes:"",              montant:"90",  paye:false, type:"sejour"},
+    {id:5, nom:"Luxembourg → Berlin",     transport:"Train",  depart:"Luxembourg", arrivee:"Berlin",      date:"15/07",    notes:"8h33 → 16h54",  montant:"",    paye:false, type:"trajet"},
+    {id:6, nom:"Berlin séjour",            transport:"-",      depart:"-",          arrivee:"-",           date:"15-17/07", notes:"",              montant:"140", paye:false, type:"sejour"},
+    {id:7, nom:"Berlin → Varsovie",       transport:"Train",  depart:"Berlin",     arrivee:"Varsovie",    date:"17/07",    notes:"11h19 → 17h00", montant:"",    paye:false, type:"trajet"},
+    {id:8, nom:"Varsovie séjour",          transport:"-",      depart:"-",          arrivee:"-",           date:"17-19/07", notes:"",              montant:"145", paye:false, type:"sejour"},
+    {id:9, nom:"Varsovie → Cracovie",     transport:"Train",  depart:"Varsovie",   arrivee:"Cracovie",    date:"19/07",    notes:"11h15 → 15h35", montant:"",    paye:false, type:"trajet"},
+    {id:10,nom:"Cracovie séjour",          transport:"-",      depart:"-",          arrivee:"-",           date:"19-21/07", notes:"",              montant:"97",  paye:false, type:"sejour"},
+    {id:11,nom:"Cracovie → Vienne",       transport:"Train",  depart:"Cracovie",   arrivee:"Vienne",      date:"21/07",    notes:"10h21 → 15h49", montant:"",    paye:false, type:"trajet"},
+    {id:12,nom:"Vienne séjour",            transport:"-",      depart:"-",          arrivee:"-",           date:"21-23/07", notes:"",              montant:"98",  paye:false, type:"sejour"},
+    {id:13,nom:"Vienne → Bratislava",     transport:"Train",  depart:"Vienne",     arrivee:"Bratislava",  date:"23/07",    notes:"11h14 → 12h10", montant:"",    paye:false, type:"trajet"},
+    {id:14,nom:"Bratislava séjour",        transport:"-",      depart:"-",          arrivee:"-",           date:"23-25/07", notes:"",              montant:"120", paye:false, type:"sejour"},
+    {id:15,nom:"Bratislava → Budapest",   transport:"Train",  depart:"Bratislava", arrivee:"Budapest",    date:"25/07",    notes:"10h50 → 13h25", montant:"",    paye:false, type:"trajet"},
+    {id:16,nom:"Budapest séjour",          transport:"-",      depart:"-",          arrivee:"-",           date:"25-27/07", notes:"",              montant:"315", paye:false, type:"sejour"},
+    {id:17,nom:"Budapest → Ljubljana",    transport:"Train",  depart:"Budapest",   arrivee:"Ljubljana",   date:"27/07",    notes:"12h30 → 20h07", montant:"",    paye:false, type:"trajet"},
+    {id:18,nom:"Ljubljana séjour",         transport:"-",      depart:"-",          arrivee:"-",           date:"27-29/07", notes:"",              montant:"151", paye:false, type:"sejour"},
+    {id:19,nom:"Ljubljana → Zagreb",      transport:"Train",  depart:"Ljubljana",  arrivee:"Zagreb",      date:"29/07",    notes:"10h30 → 12h50", montant:"",    paye:false, type:"trajet"},
+    {id:20,nom:"Zagreb séjour",            transport:"-",      depart:"-",          arrivee:"-",           date:"29-31/07", notes:"",              montant:"128", paye:false, type:"sejour"},
+    {id:21,nom:"Zagreb → Beauvais",       transport:"Avion",  depart:"Zagreb",     arrivee:"Beauvais",    date:"31/07",    notes:"13h40 → 15h55", montant:"",    paye:false, type:"trajet"},
+    {id:22,nom:"Beauvais → Brest",        transport:"Train",  depart:"Beauvais",   arrivee:"Brest",       date:"31/07",    notes:"20h59 → 00h43", montant:"",    paye:false, type:"trajet"},
+  ],
+  hotels: [
+    {id:"h1", ville:"Bruxelles",  dates:"12–14/07", nom:"À définir",              adresse:"", phone:"", prix:"170", paye:false, notes:""},
+    {id:"h2", ville:"Luxembourg", dates:"14–15/07", nom:"Hôtel Zurich",            adresse:"Plateau de Kirchberg, Luxembourg", phone:"", prix:"90",  paye:false, notes:"Arrivée 19h50"},
+    {id:"h3", ville:"Berlin",     dates:"15–17/07", nom:"Hôtel Martas Allegra",    adresse:"Berlin", phone:"", prix:"140", paye:false, notes:"Check-in 20h00"},
+    {id:"h4", ville:"Varsovie",   dates:"17–19/07", nom:"Sound Garden Hotel Airport",adresse:"Varsovie", phone:"", prix:"145", paye:false, notes:"Check-in 16h30"},
+    {id:"h5", ville:"Cracovie",   dates:"19–21/07", nom:"Hôtel Krakus",            adresse:"Cracovie", phone:"", prix:"97",  paye:false, notes:"Check-in 16h15"},
+    {id:"h6", ville:"Vienne",     dates:"21–23/07", nom:"a&o Wien Stadthalle",     adresse:"Vienne", phone:"", prix:"98",  paye:false, notes:"Check-in 17h30"},
+    {id:"h7", ville:"Bratislava", dates:"23–25/07", nom:"Pension Zlata Noha",      adresse:"Bratislava", phone:"", prix:"120", paye:false, notes:"Check-in 17h30"},
+    {id:"h8", ville:"Budapest",   dates:"25–27/07", nom:"Hôtel Metro",             adresse:"Budapest", phone:"", prix:"315", paye:false, notes:"Check-in 13h00"},
+    {id:"h9", ville:"Ljubljana",  dates:"27–29/07", nom:"B&B Hotel Park",          adresse:"Ljubljana", phone:"", prix:"151", paye:false, notes:"Check-in 17h30"},
+    {id:"h10",ville:"Zagreb",     dates:"29–31/07", nom:"Hôtel Laguna",            adresse:"Zagreb", phone:"", prix:"128", paye:false, notes:"Check-in 17h00 · Check-out 09h00 le 31/07"},
+  ],
+  gares: [
+    {id:"g1",  ville:"Brest",      type:"Gare",      nom:"Gare de Brest",              adresse:"Place du 19ème RI, 29200 Brest",                    notes:""},
+    {id:"g2",  ville:"Bruxelles",  type:"Gare",      nom:"Bruxelles-Midi / Brussel-Zuid",adresse:"Rue de France 2, 1060 Bruxelles",                  notes:""},
+    {id:"g3",  ville:"Luxembourg", type:"Gare",      nom:"Gare de Luxembourg",         adresse:"Place de la Gare, 1616 Luxembourg",                  notes:""},
+    {id:"g4",  ville:"Berlin",     type:"Gare",      nom:"Berlin Hauptbahnhof",         adresse:"Europaplatz 1, 10557 Berlin",                        notes:""},
+    {id:"g5",  ville:"Varsovie",   type:"Gare",      nom:"Warszawa Centralna",          adresse:"Al. Jerozolimskie 54, 00-024 Warszawa",              notes:""},
+    {id:"g6",  ville:"Cracovie",   type:"Gare",      nom:"Kraków Główny",               adresse:"pl. Jana Nowaka-Jeziorańskiego 2, 31-154 Kraków",    notes:""},
+    {id:"g7",  ville:"Vienne",     type:"Gare",      nom:"Wien Hauptbahnhof",           adresse:"Am Hauptbahnhof 1, 1100 Wien",                       notes:""},
+    {id:"g8",  ville:"Bratislava", type:"Gare",      nom:"Bratislava hl.st.",           adresse:"Predstaničné nám. 1, 811 04 Bratislava",             notes:""},
+    {id:"g9",  ville:"Budapest",   type:"Gare",      nom:"Budapest Keleti",             adresse:"Baross tér 15/A, 1087 Budapest",                     notes:""},
+    {id:"g10", ville:"Ljubljana",  type:"Gare",      nom:"Ljubljana kolodvor",          adresse:"Trg OF 6, 1000 Ljubljana",                          notes:""},
+    {id:"g11", ville:"Zagreb",     type:"Gare",      nom:"Zagreb Glavni kolodvor",      adresse:"Trg kralja Tomislava 12, 10000 Zagreb",              notes:""},
+    {id:"g12", ville:"Beauvais",   type:"Aéroport",  nom:"Aéroport Beauvais-Tillé",    adresse:"Aéroport de Beauvais-Tillé, 60000 Beauvais",         notes:"Navette vers Paris Porte Maillot ~1h15"},
+  ],
+  checklist: {
+    "📋 Documents & Argent": [
+      {id:"c1",  label:"Carte d'identité / Passeport",     done:false},
+      {id:"c2",  label:"Billets de train imprimés / PDF",  done:false},
+      {id:"c3",  label:"Billet d'avion Zagreb→Beauvais",   done:false},
+      {id:"c4",  label:"Réservations hôtels",              done:false},
+      {id:"c5",  label:"Carte bancaire (2 cartes)",        done:false},
+      {id:"c6",  label:"Cash euros (~200€)",               done:false},
+      {id:"c7",  label:"Assurance voyage",                 done:false},
+      {id:"c8",  label:"Carte CPAM / assurance santé",     done:false},
+    ],
+    "🎒 Bagages": [
+      {id:"c9",  label:"Sac à dos / valise cabine",        done:false},
+      {id:"c10", label:"Vêtements 3 semaines",             done:false},
+      {id:"c11", label:"Chaussures de marche",             done:false},
+      {id:"c12", label:"Veste légère / imperméable",       done:false},
+      {id:"c13", label:"Serviette microfibre",             done:false},
+      {id:"c14", label:"Cadenas pour sac",                 done:false},
+    ],
+    "💊 Santé & Hygiène": [
+      {id:"c15", label:"Trousse pharmacie de base",        done:false},
+      {id:"c16", label:"Médicaments personnels",           done:false},
+      {id:"c17", label:"Crème solaire",                    done:false},
+      {id:"c18", label:"Anti-moustiques",                  done:false},
+      {id:"c19", label:"Masque / bouchons d'oreilles",     done:false},
+    ],
+    "📱 Tech & Divers": [
+      {id:"c20", label:"Téléphone chargé",                 done:false},
+      {id:"c21", label:"Chargeur + adaptateur universel",  done:false},
+      {id:"c22", label:"Batterie externe (powerbank)",     done:false},
+      {id:"c23", label:"Écouteurs",                        done:false},
+      {id:"c24", label:"Appareil photo / GoPro",           done:false},
+      {id:"c25", label:"Ce fichier Road Trip téléchargé 😄",done:false},
+    ],
+    "🏙️ Avant de partir": [
+      {id:"c26", label:"Stopper courrier / abonnements",   done:false},
+      {id:"c27", label:"Prévenir banque des pays visités", done:false},
+      {id:"c28", label:"Arrêter plantes / animaux",        done:false},
+      {id:"c29", label:"Télécharger cartes offline Maps",  done:false},
+      {id:"c30", label:"Charger playlist / podcasts",      done:false},
+    ],
+  }
+};
+
+/* ══════════════════════════════════════════════════════════
+   STATE & PERSISTENCE
+══════════════════════════════════════════════════════════ */
+let state;
+try {
+  const saved = localStorage.getItem('roadtrip2026_v3');
+  state = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT));
+} catch(e) {
+  state = JSON.parse(JSON.stringify(DEFAULT));
+}
+
+let toastTimer;
+function save() {
+  try { localStorage.setItem('roadtrip2026_v3', JSON.stringify(state)); } catch(e){}
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 1500);
+}
+
+/* ══════════════════════════════════════════════════════════
+   TABS
+══════════════════════════════════════════════════════════ */
+function showTab(id, el) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id==='budget') renderBudget();
+  if(id==='checklist') renderChecklist();
+  if(id==='programme') renderProgramme();
+}
+
+/* ══════════════════════════════════════════════════════════
+   ROUTE VISUAL
+══════════════════════════════════════════════════════════ */
+const STOPS = [
+  {name:"Brest",date:"12/07"},{name:"Bruxelles",date:"12-14/07"},
+  {name:"Luxembourg",date:"14-15/07"},{name:"Berlin",date:"15-17/07"},
+  {name:"Varsovie",date:"17-19/07"},{name:"Cracovie",date:"19-21/07"},
+  {name:"Vienne",date:"21-23/07"},{name:"Bratislava",date:"23-25/07"},
+  {name:"Budapest",date:"25-27/07"},{name:"Ljubljana",date:"27-29/07"},
+  {name:"Zagreb",date:"29-31/07"},{name:"Brest",date:"31/07"},
+];
+function renderRoute() {
+  const c = document.getElementById('routeViz');
+  c.innerHTML = STOPS.map((s,i)=>`
+    <div class="city-stop"><div class="dot"></div><div class="cn">${s.name}</div><div class="cd">${s.date}</div></div>
+    ${i<STOPS.length-1?'<div class="route-seg"></div>':''}
+  `).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   ITINÉRAIRE
+══════════════════════════════════════════════════════════ */
+const TRANSPORTS = ['Train','FlixBus','Avion','Bus','Voiture','-'];
+const TRANSPORT_ICONS = {Train:'🚂',FlixBus:'🟢',Avion:'✈️',Bus:'🚌',Voiture:'🚗','-':'—'};
+
+function tBadge(t, id) {
+  const cls = {Train:'train',FlixBus:'flixbus',Avion:'avion',Bus:'bus',Voiture:'voiture'}[t]||'other';
+  const icon = TRANSPORT_ICONS[t]||'';
+  return `<span class="tbadge ${cls}" onclick="cycleTransport(${id})" title="Tap pour changer">${icon} ${t}</span>`;
+}
+function cycleTransport(id) {
+  const r = state.itinerary.find(r=>r.id===id);
+  if(!r) return;
+  const idx = TRANSPORTS.indexOf(r.transport);
+  r.transport = TRANSPORTS[(idx+1) % TRANSPORTS.length];
+  save(); renderItinerary();
+}
+function renderItinerary() {
+  const tbody = document.getElementById('itin-tbody');
+  tbody.innerHTML = state.itinerary.map(r=>`
+    <tr class="${r.type}" data-id="${r.id}">
+      <td><span contenteditable="true" data-field="nom" data-id="${r.id}" onblur="cellEdit(this)">${r.nom}</span></td>
+      <td>${tBadge(r.transport, r.id)}</td>
+      <td><span contenteditable="true" data-field="depart" data-id="${r.id}" onblur="cellEdit(this)">${r.depart}</span></td>
+      <td><span contenteditable="true" data-field="arrivee" data-id="${r.id}" onblur="cellEdit(this)">${r.arrivee}</span></td>
+      <td><span contenteditable="true" data-field="date" data-id="${r.id}" onblur="cellEdit(this)">${r.date}</span></td>
+      <td><span contenteditable="true" data-field="notes" data-id="${r.id}" onblur="cellEdit(this)">${r.notes}</span></td>
+      <td><span contenteditable="true" data-field="montant" data-id="${r.id}" onblur="cellEdit(this)">${r.montant}</span></td>
+      <td><button class="paid-btn ${r.paye?'oui':'non'}" onclick="togglePaid('itin',${r.id})">${r.paye?'✓ Oui':'✗ Non'}</button></td>
+      <td><button class="del-btn" onclick="delRow(${r.id})">🗑</button></td>
+    </tr>
+  `).join('');
+  renderFooter();
+}
+
+function renderFooter() {
+  const all = state.itinerary;
+  const total = all.reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
+  const paye  = all.filter(r=>r.paye).reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
+  const reste = total - paye;
+  document.getElementById('itin-tfoot').innerHTML = `
+    <tr class="tbl-footer">
+      <td colspan="6" style="text-align:right;color:rgba(255,255,255,0.7);">TOTAUX</td>
+      <td>${total.toFixed(0)} €</td>
+      <td><span style="color:#7dffb3;">${paye.toFixed(0)}€ payé</span><br><span style="color:#ffaaaa;font-size:0.65rem;">${reste.toFixed(0)}€ reste</span></td>
+      <td></td>
+    </tr>`;
+}
+
+function cellEdit(el) {
+  const id = parseInt(el.dataset.id);
+  const field = el.dataset.field;
+  const row = state.itinerary.find(r=>r.id===id);
+  if(row){ row[field] = el.textContent.trim(); save(); renderFooter(); }
+}
+
+function togglePaid(type, id) {
+  if(type==='itin') {
+    const r = state.itinerary.find(r=>r.id===id);
+    if(r){ r.paye=!r.paye; save(); renderItinerary(); }
+  }
+}
+
+function delRow(id) {
+  if(!confirm('Supprimer cette étape ?')) return;
+  state.itinerary = state.itinerary.filter(r=>r.id!==id);
+  save(); renderItinerary();
+}
+
+let addOpen = false;
+function toggleAddForm() {
+  addOpen = !addOpen;
+  document.getElementById('addForm').classList.toggle('open', addOpen);
+}
+
+function addRow() {
+  const nom     = document.getElementById('f-nom').value.trim();
+  const transport= document.getElementById('f-transport').value;
+  const date    = document.getElementById('f-date').value.trim();
+  const depart  = document.getElementById('f-depart').value.trim();
+  const arrivee = document.getElementById('f-arrivee').value.trim();
+  const notes   = document.getElementById('f-notes').value.trim();
+  const montant = document.getElementById('f-montant').value.trim();
+  const type    = document.getElementById('f-type').value;
+  if(!nom) return alert('Entrez un nom d\'étape');
+  const newId = state.itinerary.length ? Math.max(...state.itinerary.map(r=>r.id))+1 : 1;
+  state.itinerary.push({id:newId,nom,transport,depart,arrivee,date,notes,montant,paye:false,type});
+  save();
+  ['f-nom','f-date','f-depart','f-arrivee','f-notes','f-montant'].forEach(id=>document.getElementById(id).value='');
+  toggleAddForm();
+  renderItinerary();
+}
+
+/* ══════════════════════════════════════════════════════════
+   HÔTELS
+══════════════════════════════════════════════════════════ */
+function renderHotels() {
+  const c = document.getElementById('hotels-list');
+  c.innerHTML = state.hotels.map(h=>`
+    <div class="info-card">
+      <div class="ic-header">
+        <div>
+          <div class="ic-city">🏙️ ${h.ville}</div>
+          <div class="ic-dates">${h.dates}</div>
+        </div>
+        <button class="paid-btn ${h.paye?'oui':'non'}" onclick="toggleHotelPaid('${h.id}')">${h.paye?'✓ Payé':'✗ À payer'}</button>
+      </div>
+      <div class="ic-body">
+        <div class="if">
+          <label>Nom de l'hôtel / logement</label>
+          <div contenteditable="true" class="if-edit" data-hid="${h.id}" data-hfield="nom" onblur="hotelEdit(this)">${h.nom||''}</div>
+        </div>
+        <div class="if">
+          <label>Adresse complète</label>
+          <div contenteditable="true" class="if-edit" data-hid="${h.id}" data-hfield="adresse" onblur="hotelEdit(this)">${h.adresse||''}</div>
+        </div>
+        <div class="if-row">
+          <div class="if">
+            <label>Téléphone</label>
+            <div contenteditable="true" class="if-edit" data-hid="${h.id}" data-hfield="phone" onblur="hotelEdit(this)">${h.phone||''}</div>
+          </div>
+          <div class="if">
+            <label>Prix (€)</label>
+            <div contenteditable="true" class="if-edit" data-hid="${h.id}" data-hfield="prix" onblur="hotelEdit(this)">${h.prix||''}</div>
+          </div>
+        </div>
+        <div class="if">
+          <label>Notes (confirmation, code, étage…)</label>
+          <div contenteditable="true" class="if-edit" data-hid="${h.id}" data-hfield="notes" onblur="hotelEdit(this)">${h.notes||''}</div>
+        </div>
+        <a class="map-link" href="https://maps.google.com/?q=${encodeURIComponent((h.nom||h.ville+' hôtel')+' '+h.adresse)}" target="_blank">📍 Ouvrir dans Maps</a>
+      </div>
+    </div>
+  `).join('');
+}
+
+function hotelEdit(el) {
+  const hid = el.dataset.hid;
+  const field = el.dataset.hfield;
+  const h = state.hotels.find(h=>h.id===hid);
+  if(h){ h[field]=el.textContent.trim(); save(); }
+}
+
+function toggleHotelPaid(hid) {
+  const h = state.hotels.find(h=>h.id===hid);
+  if(h){ h.paye=!h.paye; save(); renderHotels(); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   GARES
+══════════════════════════════════════════════════════════ */
+function renderGares() {
+  const c = document.getElementById('gares-list');
+  c.innerHTML = state.gares.map(g=>`
+    <div class="info-card" style="border-left-color:${g.type==='Aéroport'?'#e65100':'#1565c0'}">
+      <div class="ic-header">
+        <div>
+          <div class="ic-city">${g.type==='Aéroport'?'✈️':'🚉'} ${g.ville}</div>
+          <div class="ic-dates">${g.type}</div>
+        </div>
+      </div>
+      <div class="ic-body">
+        <div class="if">
+          <label>Nom de la gare / aéroport</label>
+          <div contenteditable="true" class="if-edit" data-gid="${g.id}" data-gfield="nom" onblur="gareEdit(this)">${g.nom||''}</div>
+        </div>
+        <div class="if">
+          <label>Adresse</label>
+          <div contenteditable="true" class="if-edit" data-gid="${g.id}" data-gfield="adresse" onblur="gareEdit(this)">${g.adresse||''}</div>
+        </div>
+        <div class="if">
+          <label>Notes (quai, terminal, navette…)</label>
+          <div contenteditable="true" class="if-edit" data-gid="${g.id}" data-gfield="notes" onblur="gareEdit(this)">${g.notes||''}</div>
+        </div>
+        <a class="map-link" href="https://maps.google.com/?q=${encodeURIComponent(g.nom+' '+g.adresse)}" target="_blank">📍 Ouvrir dans Maps</a>
+      </div>
+    </div>
+  `).join('');
+}
+
+function gareEdit(el) {
+  const gid = el.dataset.gid;
+  const field = el.dataset.gfield;
+  const g = state.gares.find(g=>g.id===gid);
+  if(g){ g[field]=el.textContent.trim(); save(); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   BUDGET
+══════════════════════════════════════════════════════════ */
+function renderBudget() {
+  const itin = state.itinerary;
+  const hotels = state.hotels;
+
+  // Transport
+  const trajets = itin.filter(r=>r.type==='trajet');
+  const tTotal = trajets.reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
+  const tPaye  = trajets.filter(r=>r.paye).reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
+
+  // Hébergement
+  const hTotal = hotels.reduce((s,h)=>s+(parseFloat(h.prix)||0),0);
+  const hPaye  = hotels.filter(h=>h.paye).reduce((s,h)=>s+(parseFloat(h.prix)||0),0);
+
+  // Séjours in itinerary (for any manual entries)
+  const sejours = itin.filter(r=>r.type==='sejour');
+  const sTotal = sejours.reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
+  const sPaye  = sejours.filter(r=>r.paye).reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
+
+  const grandTotal = tTotal + hTotal;
+  const grandPaye  = tPaye + hPaye;
+  const grandReste = grandTotal - grandPaye;
+  const pct = grandTotal>0 ? Math.round(grandPaye/grandTotal*100) : 0;
+
+  document.getElementById('budget-stats').innerHTML = `
+    <div class="bstat t"><div class="amt">${grandTotal.toFixed(0)} €</div><div class="lbl">Budget total estimé</div></div>
+    <div class="bstat p"><div class="amt">${grandPaye.toFixed(0)} €</div><div class="lbl">Déjà payé ✓</div></div>
+    <div class="bstat r"><div class="amt">${grandReste.toFixed(0)} €</div><div class="lbl">Reste à payer</div></div>
+    <div class="bstat n"><div class="amt">${pct}%</div><div class="lbl">Réglé</div></div>
+  `;
+  document.getElementById('budget-prog').innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--gray);margin-bottom:4px;"><span>Progression paiements</span><span>${pct}%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div style="font-size:0.68rem;color:var(--gray);margin-top:4px;">${grandPaye.toFixed(0)} € payés sur ${grandTotal.toFixed(0)} €</div>
+  `;
+  document.getElementById('budget-rows').innerHTML = `
+    <tr>
+      <td>🚂 Transport (billets)</td>
+      <td>${tTotal.toFixed(0)} €</td>
+      <td style="color:var(--green)">${tPaye.toFixed(0)} €</td>
+      <td style="color:var(--red)">${(tTotal-tPaye).toFixed(0)} €</td>
+    </tr>
+    <tr>
+      <td>🏨 Hébergements</td>
+      <td>${hTotal.toFixed(0)} €</td>
+      <td style="color:var(--green)">${hPaye.toFixed(0)} €</td>
+      <td style="color:var(--red)">${(hTotal-hPaye).toFixed(0)} €</td>
+    </tr>
+    <tr class="sub-total">
+      <td>💰 TOTAL</td>
+      <td>${grandTotal.toFixed(0)} €</td>
+      <td style="color:var(--green)">${grandPaye.toFixed(0)} €</td>
+      <td style="color:var(--red)">${grandReste.toFixed(0)} €</td>
+    </tr>
+  `;
+}
+
+/* ══════════════════════════════════════════════════════════
+   CHECKLIST
+══════════════════════════════════════════════════════════ */
+function renderChecklist() {
+  const cats = state.checklist;
+  const allItems = Object.values(cats).flat();
+  const done = allItems.filter(i=>i.done).length;
+  const total = allItems.length;
+  const pct = total>0?Math.round(done/total*100):0;
+  document.getElementById('cl-count').textContent = `${done} / ${total}`;
+  document.getElementById('cl-bar').style.width = pct+'%';
+
+  const c = document.getElementById('checklist-list');
+  c.innerHTML = Object.entries(cats).map(([cat,items])=>`
+    <div class="cl-cat">
+      <h3>${cat}</h3>
+      ${items.map(item=>`
+        <div class="cl-item ${item.done?'done':''}" onclick="toggleCheck('${item.id}')">
+          <div class="cl-check"></div>
+          <div class="cl-text">${item.label}</div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function toggleCheck(id) {
+  for(const items of Object.values(state.checklist)) {
+    const item = items.find(i=>i.id===id);
+    if(item){ item.done=!item.done; save(); renderChecklist(); return; }
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════ */
+renderRoute();
+renderItinerary();
+renderHotels();
+renderGares();
+/* ══════════════════════════════════════════════════════════
+   PROGRAMME JOURNALIER (données du PDF)
+══════════════════════════════════════════════════════════ */
+const PROGRAMME = [
+  {jour:1, titre:"Bruxelles", date:"Dim 12 juillet 2026", flag:"🇧🇪", hotel:"À définir", items:[
+    {h:"12:00",t:"train", d:"🚂 Départ Gare de Brest"},
+    {h:"14:30",t:"info",  d:"📍 Arrivée Rennes – correspondance"},
+    {h:"15:35",t:"train", d:"🚂 Départ Rennes"},
+    {h:"19:17",t:"info",  d:"📍 Arrivée Bruxelles-Midi"},
+    {h:"Soir", t:"visit", d:"🚶 Balade centre-ville – Grand-Place, Manneken Pis, Galeries Royales Saint-Hubert"},
+  ]},
+  {jour:2, titre:"Bruxelles", date:"Lun 13 juillet 2026", flag:"🇧🇪", hotel:"(même hôtel)", items:[
+    {h:"Journée",t:"visit", d:"🏛️ Grand-Place"},
+    {h:"",       t:"visit", d:"🗿 Manneken Pis"},
+    {h:"",       t:"visit", d:"🏛️ Galeries Royales Saint-Hubert"},
+    {h:"Libre",  t:"info",  d:"Journée de repos & préparation du voyage"},
+  ]},
+  {jour:3, titre:"Luxembourg", date:"Mar 14 juillet 2026", flag:"🇱🇺", hotel:"Hôtel Zurich", items:[
+    {h:"08:32",t:"train", d:"🚂 Départ Bruxelles-Midi"},
+    {h:"11:49",t:"info",  d:"📍 Arrivée Gare de Luxembourg"},
+    {h:"12:15",t:"visit", d:"🌉 Pont Adolphe"},
+    {h:"12:45",t:"visit", d:"⛪ Cathédrale Notre-Dame de Luxembourg"},
+    {h:"13:10",t:"visit", d:"🏛️ Palais Grand-Ducal"},
+    {h:"13:30",t:"visit", d:"🛤️ Chemin de la Corniche (« plus belle ballade d'Europe »)"},
+    {h:"14:15",t:"visit", d:"🏰 Casemates du Bock (fortifications souterraines)"},
+    {h:"15:00",t:"visit", d:"🪨 Rocher du Bock – panorama sur la ville"},
+    {h:"16:00",t:"visit", d:"🏘️ Quartier du Grund – vieille ville au bord de l'Alzette"},
+    {h:"17:00",t:"visit", d:"🌊 Promenade le long de l'Alzette"},
+    {h:"18:00",t:"visit", d:"🛗 Ascenseur Pfaffenthal (gratuit, vue panoramique)"},
+    {h:"18:30",t:"visit", d:"🌳 Parc Kinnekswiss"},
+    {h:"19:30",t:"visit", d:"🏙️ Plateau de Kirchberg (quartier européen)"},
+    {h:"19:50",t:"hotel", d:"🏨 Check-in Hôtel Zurich"},
+  ]},
+  {jour:4, titre:"Berlin (arrivée)", date:"Mer 15 juillet 2026", flag:"🇩🇪", hotel:"Hôtel Martas Allegra", items:[
+    {h:"09:32",t:"train", d:"🚂 Départ Gare de Luxembourg"},
+    {h:"15:10",t:"info",  d:"📍 Arrivée Berlin Hauptbahnhof"},
+    {h:"15:30",t:"visit", d:"🚪 Porte de Brandebourg"},
+    {h:"16:00",t:"visit", d:"🏛️ Reichstag (Parlement allemand)"},
+    {h:"16:20",t:"visit", d:"🕍 Mémorial de l'Holocauste"},
+    {h:"17:00",t:"visit", d:"🛣️ Unter den Linden (avenue principale)"},
+    {h:"18:00",t:"visit", d:"⛪ Cathédrale de Berlin (Berliner Dom)"},
+    {h:"19:00",t:"visit", d:"🗼 Alexanderplatz & Tour de télévision"},
+    {h:"20:00",t:"hotel", d:"🏨 Check-in Hôtel Martas Allegra"},
+  ]},
+  {jour:5, titre:"Berlin", date:"Jeu 16 juillet 2026", flag:"🇩🇪", hotel:"Hôtel Martas Allegra", items:[
+    {h:"09:00",t:"visit", d:"🎨 East Side Gallery (1,3 km de fresques sur le Mur de Berlin)"},
+    {h:"10:00",t:"visit", d:"🌉 Oberbaumbrücke (pont gothique sur la Spree)"},
+    {h:"11:15",t:"visit", d:"🪖 Checkpoint Charlie (ancien poste frontière USA/URSS)"},
+    {h:"12:00",t:"visit", d:"🏙️ Potsdamer Platz"},
+    {h:"13:00",t:"food",  d:"🍽️ Déjeuner dans le centre"},
+    {h:"14:00",t:"visit", d:"🌳 Tiergarten (grand parc central)"},
+    {h:"15:00",t:"visit", d:"🗽 Siegessäule – Colonne de la Victoire (vue panoramique)"},
+    {h:"16:30",t:"visit", d:"🏟️ Mauerpark (marché aux puces & karaoké dominical)"},
+    {h:"18:30",t:"visit", d:"🗼 Alexanderplatz – soirée"},
+    {h:"20:00",t:"hotel", d:"🏨 Retour Hôtel Martas Allegra"},
+  ]},
+  {jour:6, titre:"Varsovie (arrivée)", date:"Ven 17 juillet 2026", flag:"🇵🇱", hotel:"Sound Garden Hotel Airport", items:[
+    {h:"08:30",t:"train", d:"🚂 Départ Berlin Hauptbahnhof"},
+    {h:"14:00",t:"info",  d:"📍 Arrivée Warszawa Centralna"},
+    {h:"14:10",t:"visit", d:"🏛️ Palais de la Culture et de la Science (gratte-ciel stalinien)"},
+    {h:"14:45",t:"visit", d:"🛍️ Centre commercial Złote Tarasy"},
+    {h:"15:10",t:"info",  d:"🚋 Tram direction hôtel"},
+    {h:"15:40",t:"visit", d:"🌳 Parc Szczęśliwicki"},
+    {h:"16:30",t:"hotel", d:"🏨 Check-in Sound Garden Hotel Airport"},
+    {h:"18:00",t:"visit", d:"🏘️ Vieille Ville – Rynek Starego Miasta (place centrale reconstituée)"},
+    {h:"19:00",t:"visit", d:"🏰 Château Royal de Varsovie"},
+    {h:"20:00",t:"visit", d:"🛣️ Nowy Świat – rue commerçante animée"},
+  ]},
+  {jour:7, titre:"Varsovie", date:"Sam 18 juillet 2026", flag:"🇵🇱", hotel:"Sound Garden Hotel Airport", items:[
+    {h:"09:45",t:"visit", d:"🌳 Parc Łazienki Królewskie (parc royal)"},
+    {h:"10:30",t:"visit", d:"🏛️ Palais sur l'Eau (Pałac na Wyspie)"},
+    {h:"11:15",t:"visit", d:"🏛️ Belweder (résidence présidentielle)"},
+    {h:"12:00",t:"visit", d:"🏟️ Stade National PGE Narodowy"},
+    {h:"13:00",t:"visit", d:"🌊 Balade le long de la Vistule"},
+    {h:"14:30",t:"visit", d:"🏛️ Musée de l'Insurrection de Varsovie"},
+    {h:"16:00",t:"visit", d:"🏛️ Palais de la Culture – panorama depuis le 30e étage"},
+    {h:"17:30",t:"visit", d:"🎨 Quartier Praga – street art & galeries"},
+    {h:"19:00",t:"food",  d:"🍽️ Dîner & balade Nowy Świat"},
+    {h:"20:30",t:"hotel", d:"🏨 Retour hôtel"},
+  ]},
+  {jour:8, titre:"Cracovie (arrivée)", date:"Dim 19 juillet 2026", flag:"🇵🇱", hotel:"Hôtel Krakus", items:[
+    {h:"09:00",t:"train", d:"🚂 Départ Warszawa Centralna"},
+    {h:"11:25",t:"info",  d:"📍 Arrivée Kraków Główny"},
+    {h:"11:40",t:"visit", d:"🏛️ Place du Marché – Rynek Główny (plus grande place médiévale d'Europe)"},
+    {h:"12:15",t:"visit", d:"⛪ Basilique Sainte-Marie (trompette à la tour toutes les heures)"},
+    {h:"12:45",t:"visit", d:"🏛️ Halle aux Draps (Sukiennice) – marché artisanal"},
+    {h:"13:30",t:"visit", d:"🏰 Château du Wawel (résidence des rois de Pologne)"},
+    {h:"14:30",t:"visit", d:"🐉 Grotte du Dragon du Wawel"},
+    {h:"15:00",t:"visit", d:"🌊 Balade le long de la Vistule"},
+    {h:"16:15",t:"hotel", d:"🏨 Check-in Hôtel Krakus"},
+    {h:"18:30",t:"visit", d:"🏘️ Quartier Kazimierz (ancien quartier juif – bars, galeries, synagogues)"},
+  ]},
+  {jour:9, titre:"Excursion Auschwitz", date:"Lun 20 juillet 2026", flag:"🇵🇱", hotel:"Hôtel Krakus", items:[
+    {h:"08:06",t:"train", d:"🚂 Départ Kraków Główny → Oświęcim (Auschwitz)"},
+    {h:"09:00",t:"visit", d:"🕍 Visite Auschwitz I – musée principal"},
+    {h:"11:30",t:"visit", d:"🕍 Transfert & visite Auschwitz II – Birkenau"},
+    {h:"14:00",t:"info",  d:"☕ Fin de visite – pause déjeuner"},
+    {h:"15:30",t:"visit", d:"🕯️ Temps libre – Mémorial extérieur"},
+    {h:"17:37",t:"train", d:"🚂 Retour Cracovie"},
+    {h:"⚠️",   t:"info",  d:"Prévoir eau, snacks, chaussures confort. Lieu sensible, respect indispensable. Photos limitées."},
+  ]},
+  {jour:10, titre:"Vienne (arrivée)", date:"Mar 21 juillet 2026", flag:"🇦🇹", hotel:"a&o Wien Stadthalle", items:[
+    {h:"06:20",t:"train", d:"🚂 Départ Kraków Główny"},
+    {h:"13:00",t:"info",  d:"📍 Arrivée Wien Hauptbahnhof"},
+    {h:"13:25",t:"visit", d:"⛪ Karlskirche – église baroque (Karlsplatz)"},
+    {h:"14:00",t:"visit", d:"🎭 Wiener Staatsoper – Opéra de Vienne (extérieur)"},
+    {h:"14:20",t:"visit", d:"🏛️ Parlement autrichien"},
+    {h:"14:45",t:"visit", d:"🏛️ Rathaus (Hôtel de ville néo-gothique)"},
+    {h:"15:10",t:"visit", d:"🌳 Volksgarten & Burggarten"},
+    {h:"15:45",t:"visit", d:"🎨 MuseumsQuartier (2e plus grand complexe muséal du monde)"},
+    {h:"16:30",t:"visit", d:"🏛️ Maria-Theresien-Platz (entre KHM et NHM)"},
+    {h:"17:10",t:"info",  d:"➡️ Direction hôtel"},
+    {h:"17:30",t:"hotel", d:"🏨 Check-in a&o Wien Stadthalle"},
+    {h:"19:00",t:"visit", d:"⛪ Stephansdom (cathédrale gothique – centre de Vienne)"},
+    {h:"20:00",t:"visit", d:"🛣️ Graben & Kohlmarkt – rues piétonnes"},
+  ]},
+  {jour:11, titre:"Vienne", date:"Mer 22 juillet 2026", flag:"🇦🇹", hotel:"a&o Wien Stadthalle", items:[
+    {h:"09:00",t:"info",  d:"🚶 Départ de l'hôtel"},
+    {h:"09:30",t:"visit", d:"🏰 Château de Schönbrunn (résidence impériale – 1441 pièces)"},
+    {h:"10:45",t:"visit", d:"🏛️ Gloriette – panorama sur Vienne"},
+    {h:"12:00",t:"food",  d:"🍽️ Déjeuner autour de Schönbrunn"},
+    {h:"13:15",t:"visit", d:"🛍️ Naschmarkt (marché viennois – olives, fromages, épices)"},
+    {h:"14:45",t:"visit", d:"🏛️ Belvedere – palais baroque (extérieurs)"},
+    {h:"16:00",t:"visit", d:"🌳 Stadtpark (statue de Strauss dorée)"},
+    {h:"17:15",t:"visit", d:"🏘️ Innere Stadt – centre historique UNESCO"},
+    {h:"19:00",t:"food",  d:"🍽️ Dîner dans le centre"},
+    {h:"21:00",t:"hotel", d:"🏨 Retour hôtel"},
+  ]},
+  {jour:12, titre:"Bratislava (arrivée)", date:"Jeu 23 juillet 2026", flag:"🇸🇰", hotel:"Pension Zlata Noha", items:[
+    {h:"10:15",t:"train", d:"🚂 Départ Wien Hauptbahnhof"},
+    {h:"11:21",t:"info",  d:"📍 Arrivée Bratislava Hlavná Stanica"},
+    {h:"11:35",t:"visit", d:"🕍 Slavín Memorial (cimetière militaire soviétique – panorama)"},
+    {h:"12:30",t:"visit", d:"🏰 Château de Bratislava (vue sur le Danube et l'Autriche)"},
+    {h:"13:30",t:"visit", d:"🏘️ Vieille Ville – Staré Mesto (piétonne et animée)"},
+    {h:"14:30",t:"visit", d:"⛪ Cathédrale Saint-Martin (couronnement des rois de Hongrie)"},
+    {h:"15:00",t:"visit", d:"🌉 Pont UFO – Most SNP (restaurant panoramique au sommet)"},
+    {h:"16:00",t:"visit", d:"🌊 Balade bords du Danube – Eurovea"},
+    {h:"17:30",t:"hotel", d:"🏨 Check-in Pension Zlata Noha"},
+    {h:"19:00",t:"food",  d:"🍽️ Dîner recommandé : Koliba Bratislava (cuisine slovaque traditionnelle)"},
+  ]},
+  {jour:13, titre:"Bratislava", date:"Ven 24 juillet 2026", flag:"🇸🇰", hotel:"Pension Zlata Noha", items:[
+    {h:"09:00",t:"info",  d:"🚶 Départ Pension Zlata Noha"},
+    {h:"10:00",t:"visit", d:"🏰 Château de Devín (ruines du Xe s. sur falaise – Danube & Morava)"},
+    {h:"12:00",t:"visit", d:"🎨 Musée Danubiana Meulensteen (art contemporain, bords du Danube)"},
+    {h:"14:00",t:"visit", d:"🌳 Parc Sad Janka Kráľa (plus vieux parc public d'Europe centrale)"},
+    {h:"15:30",t:"visit", d:"🌊 Eurovea Riverside – promenade & shopping"},
+    {h:"17:00",t:"visit", d:"🏘️ Staré Mesto – balade dans la vieille ville"},
+    {h:"18:30",t:"food",  d:"🍽️ Dîner : Slovak Pub (plats typiques slovaques)"},
+    {h:"20:00",t:"hotel", d:"🏨 Retour Pension Zlata Noha"},
+  ]},
+  {jour:14, titre:"Budapest (arrivée)", date:"Sam 25 juillet 2026", flag:"🇭🇺", hotel:"Hôtel Metro", items:[
+    {h:"08:10",t:"train", d:"🚂 Départ Bratislava"},
+    {h:"10:33",t:"info",  d:"📍 Arrivée Budapest Keleti"},
+    {h:"10:45",t:"visit", d:"🏛️ Parlement de Budapest – Országház (néo-gothique, 3e plus grand du monde)"},
+    {h:"11:30",t:"visit", d:"🌊 Promenade bords du Danube – Pont des Chaînes"},
+    {h:"12:15",t:"visit", d:"⛪ Basilique Saint-Étienne (relique de la main droite de Saint-Étienne)"},
+    {h:"13:00",t:"hotel", d:"🏨 Check-in Hôtel Metro"},
+    {h:"15:00",t:"visit", d:"🏝️ Île Marguerite – Margitsziget (parc, fontaines, ruines médiévales)"},
+    {h:"18:30",t:"food",  d:"🍽️ Dîner & balade"},
+    {h:"20:30",t:"hotel", d:"🏨 Retour hôtel"},
+  ]},
+  {jour:15, titre:"Budapest", date:"Dim 26 juillet 2026", flag:"🇭🇺", hotel:"Hôtel Metro", items:[
+    {h:"09:20",t:"visit", d:"🏛️ Hősök tere – Place des Héros (classée UNESCO)"},
+    {h:"10:00",t:"visit", d:"🌳 Városliget – parc de la ville"},
+    {h:"10:30",t:"visit", d:"🏰 Château Vajdahunyad (mélange de styles architecturaux)"},
+    {h:"11:30",t:"visit", d:"🛣️ Avenue Andrássy (UNESCO – boutiques, ambassades)"},
+    {h:"12:30",t:"food",  d:"🍽️ Déjeuner sur Andrássy"},
+    {h:"14:00",t:"visit", d:"🏛️ House of Terror (musée du régime fasciste et soviétique) – extérieur"},
+    {h:"15:00",t:"visit", d:"☕ New York Café (café Belle Époque le plus beau du monde)"},
+    {h:"16:00",t:"visit", d:"🛍️ Váci Utca – rue commerçante principale"},
+    {h:"18:00",t:"visit", d:"🌉 Liberty Bridge (pont de la Liberté – vue au coucher de soleil)"},
+    {h:"19:30",t:"food",  d:"🍽️ Dîner côté Kalvin Tér"},
+    {h:"22:00",t:"hotel", d:"🏨 Retour hôtel"},
+  ]},
+  {jour:16, titre:"Ljubljana (arrivée)", date:"Lun 27 juillet 2026", flag:"🇸🇮", hotel:"B&B Hotel Park", items:[
+    {h:"07:00",t:"train", d:"🚂 Départ Budapest Keleti"},
+    {h:"14:00",t:"info",  d:"📍 Arrivée Gare de Ljubljana"},
+    {h:"14:15",t:"visit", d:"🌉 Pont du Dragon (4 dragons en bronze – symbole de la ville)"},
+    {h:"14:40",t:"visit", d:"🌉 Triple Bridge – Tromostovje (3 ponts sur la Ljubljanica)"},
+    {h:"15:00",t:"visit", d:"🏛️ Place Prešeren (cœur de la vieille ville)"},
+    {h:"16:00",t:"visit", d:"🏰 Château de Ljubljana (funiculaire ou montée à pied – panorama)"},
+    {h:"17:30",t:"hotel", d:"🏨 Check-in B&B Hotel Park"},
+    {h:"18:30",t:"visit", d:"🏘️ Vieille Ville de Ljubljana"},
+    {h:"20:00",t:"food",  d:"🍽️ Dîner en bord de rivière Ljubljanica"},
+  ]},
+  {jour:17, titre:"Ljubljana", date:"Mar 28 juillet 2026", flag:"🇸🇮", hotel:"B&B Hotel Park", items:[
+    {h:"09:00",t:"info",  d:"🚶 Départ B&B Hotel Park"},
+    {h:"09:20",t:"visit", d:"🌳 Parc Tivoli (plus grand parc de Ljubljana)"},
+    {h:"10:30",t:"visit", d:"🏛️ Tivoli Mansion – International Centre of Graphic Arts"},
+    {h:"11:30",t:"visit", d:"🗼 Nebotičnik Tower – vue panoramique depuis le café au sommet"},
+    {h:"12:30",t:"food",  d:"🍽️ Déjeuner dans le centre"},
+    {h:"14:00",t:"visit", d:"🎨 Metelkova Art District (ancienne caserne reconvertie en espace culturel alternatif)"},
+    {h:"15:30",t:"visit", d:"🌊 Promenade sur la Ljubljanica"},
+    {h:"17:00",t:"visit", d:"🛍️ Marché Central (légumes, fromages, artisanat)"},
+    {h:"19:00",t:"food",  d:"🍽️ Dîner en vieille ville"},
+    {h:"21:00",t:"hotel", d:"🏨 Retour hôtel"},
+  ]},
+  {jour:18, titre:"Zagreb (arrivée)", date:"Mer 29 juillet 2026", flag:"🇭🇷", hotel:"Hôtel Laguna", items:[
+    {h:"08:25",t:"train", d:"🚂 Départ Ljubljana"},
+    {h:"11:00",t:"info",  d:"📍 Arrivée Zagreb Glavni kolodvor"},
+    {h:"11:10",t:"visit", d:"🌳 Parc Zrinjevac (bandstand et fontaine)"},
+    {h:"12:00",t:"visit", d:"🏛️ Place Ban Jelačić (cœur de Zagreb)"},
+    {h:"12:45",t:"food",  d:"🍽️ Déjeuner rue Tkalčićeva (restaurants & bars en terrasse)"},
+    {h:"14:00",t:"visit", d:"⛪ Cathédrale de Zagreb (néo-gothique, plus haute de Croatie)"},
+    {h:"14:45",t:"visit", d:"🛍️ Marché Dolac (marché paysan coloré, chapeaux rouges)"},
+    {h:"15:30",t:"visit", d:"🏘️ Haute Ville – Gornji Grad (quartier médiéval)"},
+    {h:"16:00",t:"visit", d:"⛪ Église Saint-Marc (toit en tuiles aux armoiries de Zagreb)"},
+    {h:"17:00",t:"hotel", d:"🏨 Check-in Hôtel Laguna"},
+    {h:"19:00",t:"food",  d:"🍽️ Dîner et balade"},
+    {h:"21:30",t:"hotel", d:"🏨 Retour hôtel"},
+  ]},
+  {jour:19, titre:"Zagreb", date:"Jeu 30 juillet 2026", flag:"🇭🇷", hotel:"Hôtel Laguna", items:[
+    {h:"09:00",t:"info",  d:"🚶 Départ Hôtel Laguna"},
+    {h:"09:30",t:"visit", d:"⚰️ Cimetière Mirogoj (nécropole monumentale – chef-d'œuvre architectural)"},
+    {h:"11:00",t:"visit", d:"🌳 Parc Maksimir (premier parc public de Croatie, 1794)"},
+    {h:"11:45",t:"visit", d:"🦁 Zoo de Zagreb (extérieur)"},
+    {h:"12:45",t:"food",  d:"🍽️ Déjeuner secteur Maksimir"},
+    {h:"14:15",t:"visit", d:"🛣️ Avenue Ilica (plus longue rue de Zagreb – shopping)"},
+    {h:"15:30",t:"visit", d:"🏛️ Museum of Broken Relationships (musée des relations brisées – unique au monde)"},
+    {h:"16:15",t:"visit", d:"🚡 Funiculaire de Zagreb (le plus court du monde – 66 m)"},
+    {h:"17:00",t:"visit", d:"🛣️ Tkalčićeva – terrasses & ambiance"},
+    {h:"19:00",t:"food",  d:"🍽️ Dîner dans le centre"},
+    {h:"21:00",t:"hotel", d:"🏨 Retour hôtel"},
+  ]},
+  {jour:20, titre:"Retour en France", date:"Ven 31 juillet 2026", flag:"🇭🇷✈️🇫🇷", hotel:"—", items:[
+    {h:"09:00",t:"hotel", d:"✔️ Check-out Hôtel Laguna"},
+    {h:"09:15",t:"info",  d:"🚕 Taxi recommandé vers l'aéroport de Zagreb"},
+    {h:"10:00",t:"info",  d:"🛄 Enregistrement & dépôt bagages"},
+    {h:"11:30",t:"info",  d:"🔒 Contrôles de sécurité"},
+    {h:"12:20",t:"avion", d:"✈️ Décollage Zagreb ZAG → Beauvais BVA"},
+    {h:"14:20",t:"avion", d:"✈️ Atterrissage Aéroport de Beauvais-Tillé"},
+    {h:"~15:30",t:"train", d:"🚌 Navette Beauvais → Paris Porte Maillot (~1h15)"},
+    {h:"~21:00",t:"train", d:"🚂 Train Paris → Brest (nuit)"},
+  ]},
+];
+
+const iconType = {train:'🚂',avion:'✈️',hotel:'🏨',visit:'📍',food:'🍽️',info:'ℹ️'};
+
+let openDays = {};
+
+function renderProgramme() {
+  const c = document.getElementById('programme-list');
+  c.innerHTML = PROGRAMME.map((d,i) => `
+    <div class="prog-card">
+      <div class="prog-header" onclick="toggleDay(${i})">
+        <span class="prog-jour">J${d.jour}</span>
+        <span class="prog-flag">${d.flag}</span>
+        <span class="prog-titre">${d.titre}</span>
+        <span class="prog-date">${d.date.split(' ').slice(1).join(' ')}</span>
+        <span class="prog-arrow" id="arr-${i}">${openDays[i]?'▾':'▸'}</span>
+      </div>
+      <div class="prog-body" id="body-${i}" style="display:${openDays[i]?'block':'none'}">
+        ${d.items.map(item=>`
+          <div class="prog-item">
+            <span class="prog-time">${item.h}</span>
+            <span class="prog-icon">${iconType[item.t]||'📌'}</span>
+            <span class="prog-desc type-${item.t}">${item.d}</span>
+          </div>
+        `).join('')}
+        ${d.hotel && d.hotel!=='—' ? `<div class="prog-hotel-tag">🏨 ${d.hotel}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleDay(i) {
+  openDays[i] = !openDays[i];
+  const body = document.getElementById('body-'+i);
+  const arr  = document.getElementById('arr-'+i);
+  if(body) body.style.display = openDays[i] ? 'block' : 'none';
+  if(arr)  arr.textContent = openDays[i] ? '▾' : '▸';
+}
+</script>
+</body>
+</html>

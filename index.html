@@ -1546,11 +1546,196 @@ function gareEdit(el) {
 
 
 /* ══════════════════════════════════════════════════════════
-   BANQUE D'IMAGES — IndexedDB (persistant, quota illimité)
-   localStorage = métadonnées uniquement (id, entityId, caption…)
-   IndexedDB     = données binaires (base64)
+   BANQUE D'IMAGES
+   ┌─ localStorage : métadonnées + vignette 120px (affichage instantané)
+   └─ IndexedDB    : pleine résolution (vue agrandie seulement)
+   → Pas d'async au rendu = jamais de grille vide au chargement
 ══════════════════════════════════════════════════════════ */
 let _idb = null;
+function openIDB() {
+  if(_idb) return Promise.resolve(_idb);
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open('RoadTripImagesV2',1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore('blobs',{keyPath:'id'});
+    r.onsuccess = e => { _idb=e.target.result; res(_idb); };
+    r.onerror   = e => rej(e.target.error);
+  });
+}
+function idbPut(id,data){ return openIDB().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('blobs','readwrite'); tx.objectStore('blobs').put({id,data}); tx.oncomplete=res; tx.onerror=e=>rej(e.target.error); })); }
+function idbGet(id){ return openIDB().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('blobs','readonly'); const r=tx.objectStore('blobs').get(id); r.onsuccess=e=>res(e.target.result?.data||null); r.onerror=e=>rej(e.target.error); })); }
+function idbDel(id){ return openIDB().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('blobs','readwrite'); tx.objectStore('blobs').delete(id); tx.oncomplete=res; tx.onerror=e=>rej(e.target.error); })); }
+
+if(!state.images){ state.images=[]; save(); }
+
+/* ── Compression ─────────────────────────────────────── */
+function makeCanvas(file, maxPx, quality){
+  return new Promise(res=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const el=new Image();
+      el.onload=()=>{
+        let w=el.width,h=el.height;
+        if(w>maxPx||h>maxPx){ if(w>h){h=Math.round(h*maxPx/w);w=maxPx;}else{w=Math.round(w*maxPx/h);h=maxPx;} }
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(el,0,0,w,h);
+        res(c.toDataURL('image/jpeg',quality));
+      };
+      el.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ── Import ──────────────────────────────────────────── */
+function pickImage(entityType, entityId){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.multiple=true;
+  inp.onchange=async e=>{
+    const btn=document.querySelector(`[onclick="pickImage('${entityType}','${entityId}')"]`);
+    if(btn){ btn.textContent='⏳ Import…'; btn.disabled=true; }
+    for(const file of Array.from(e.target.files||[])){
+      const id='img'+Date.now()+Math.random().toString(36).slice(2,6);
+      // Vignette 120px → state (localStorage, rendu instantané)
+      const thumb=await makeCanvas(file,120,0.5);
+      // Pleine résolution → IDB (seulement pour vue agrandie)
+      const full=await makeCanvas(file,1200,0.82);
+      await idbPut(id,full);
+      state.images.push({id,entityId,entityType,name:file.name,caption:'',ts:Date.now(),thumb});
+      save();
+    }
+    if(btn){ btn.textContent='📷 Ajouter une photo'; btn.disabled=false; }
+    // Re-render grids (synchrone via thumb)
+    renderEntityImageGrid(entityType,entityId);
+    const sec=document.getElementById('sec-imgbank');
+    if(sec&&sec.classList.contains('active')) renderImageBank();
+    if(entityType==='visite') renderVisites();
+  };
+  inp.click();
+}
+
+/* ── Rendu grille (SYNCHRONE via thumb) ──────────────── */
+function renderEntityImageGrid(entityType, entityId){
+  const metas=(state.images||[]).filter(i=>i.entityType===entityType&&i.entityId===entityId);
+  const c=document.getElementById('imgs-'+entityType+'-'+entityId);
+  if(!c) return;
+  c.innerHTML=metas.map(img=>`
+    <div class="img-thumb" onclick="viewImage('${img.id}')">
+      <img src="${img.thumb||''}" alt="${img.caption||img.name}" loading="lazy">
+      <div class="img-cap">${img.caption||img.name}</div>
+      <button class="img-del" onclick="event.stopPropagation();deleteImage('${img.id}','${entityType}','${entityId}')">✕</button>
+    </div>`).join('');
+}
+
+function renderAllEntityImages(entityType){
+  const entities=entityType==='hotel'?state.hotels:state.gares;
+  entities.forEach(e=>renderEntityImageGrid(entityType,e.id));
+}
+
+/* ── Vue plein écran (charge full depuis IDB) ─────────── */
+async function viewImage(imgId){
+  const meta=(state.images||[]).find(i=>i.id===imgId);
+  if(!meta) return;
+  document.getElementById('imgModal')?.remove();
+  const modal=document.createElement('div'); modal.id='imgModal'; modal.className='img-modal';
+  // Afficher la vignette immédiatement pendant le chargement
+  modal.innerHTML=`
+    <button class="img-modal-close" onclick="closeImgModal()">✕</button>
+    <img id="imgModalImg" src="${meta.thumb||''}" alt="${meta.name}" style="opacity:0.6">
+    <div class="img-modal-cap" contenteditable="true" onblur="saveCaption('${imgId}',this)" style="min-width:120px">${meta.caption||meta.name}</div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="img-modal-del" onclick="deleteImageModal('${imgId}')">🗑 Supprimer</button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click',e=>{ if(e.target===modal) closeImgModal(); });
+  // Charger la pleine résolution depuis IDB
+  idbGet(imgId).then(data=>{
+    const el=document.getElementById('imgModalImg');
+    if(el&&data){ el.src=data; el.style.opacity='1'; }
+  }).catch(()=>{
+    const el=document.getElementById('imgModalImg');
+    if(el) el.style.opacity='1';
+  });
+}
+
+function closeImgModal(){ document.getElementById('imgModal')?.remove(); }
+
+function saveCaption(imgId,el){
+  const meta=(state.images||[]).find(i=>i.id===imgId);
+  if(meta){ meta.caption=el.textContent.trim(); save();
+    renderEntityImageGrid(meta.entityType,meta.entityId); }
+}
+
+async function deleteImageModal(imgId){
+  const meta=(state.images||[]).find(i=>i.id===imgId);
+  if(!meta) return;
+  state.images=state.images.filter(i=>i.id!==imgId); save();
+  idbDel(imgId);
+  closeImgModal();
+  renderEntityImageGrid(meta.entityType,meta.entityId);
+  const sec=document.getElementById('sec-imgbank');
+  if(sec&&sec.classList.contains('active')) renderImageBank();
+}
+
+function deleteImage(imgId,entityType,entityId){
+  state.images=(state.images||[]).filter(i=>i.id!==imgId); save();
+  idbDel(imgId);
+  renderEntityImageGrid(entityType,entityId);
+  const sec=document.getElementById('sec-imgbank');
+  if(sec&&sec.classList.contains('active')) renderImageBank();
+}
+
+/* ── Galerie globale ─────────────────────────────────── */
+function renderImageBank(){
+  const c=document.getElementById('imgbank-list');
+  if(!c) return;
+  const all=state.images||[];
+  if(!all.length){
+    c.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--gray);font-size:0.82rem">Aucune photo importée.<br><br>Ajoutez-en depuis 🏨 Hôtels · 🚉 Gares · 🏛️ Visites</div>';
+    return;
+  }
+  const groups={};
+  all.forEach(img=>{ if(!groups[img.entityType])groups[img.entityType]=[]; groups[img.entityType].push(img); });
+  const typeLabel={hotel:'🏨 Hôtels',gare:'🚉 Gares & Aéroports',visite:'🏛️ Visites'};
+  c.innerHTML=Object.entries(groups).map(([type,imgs])=>`
+    <div style="margin-bottom:18px">
+      <div class="section-title" style="font-size:0.82rem;margin-bottom:8px">${typeLabel[type]||type} (${imgs.length})</div>
+      <div class="img-grid" style="grid-template-columns:repeat(4,1fr)">${
+        imgs.map(img=>`
+          <div class="img-thumb" onclick="viewImage('${img.id}')">
+            <img src="${img.thumb||''}" alt="${img.caption||img.name}" loading="lazy">
+            <div class="img-cap">${img.caption||img.name}</div>
+            <button class="img-del" onclick="event.stopPropagation();deleteImage('${img.id}','${img.entityType}','${img.entityId}')">✕</button>
+          </div>`).join('')
+      }</div>
+    </div>`).join('')
+  +`<div style="text-align:center;font-size:0.68rem;color:var(--gray);padding:8px">${all.length} photo${all.length>1?'s':''} · vignettes en local · pleine résolution en IDB</div>`;
+}
+
+/* ── Migration : anciennes images base64 dans state → IDB ── */
+(()=>{
+  if(!state.images||!state.images.some(i=>i.data)) return;
+  state.images.forEach(async img=>{
+    if(!img.data) return;
+    // Générer une vignette si manquante
+    if(!img.thumb){
+      // Créer vignette depuis le base64 full
+      await new Promise(res=>{
+        const el=new Image(); el.onload=()=>{
+          let w=el.width,h=el.height,MAX=120;
+          if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+          const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+          cv.getContext('2d').drawImage(el,0,0,w,h);
+          img.thumb=cv.toDataURL('image/jpeg',0.5); res();
+        }; el.src=img.data;
+      });
+    }
+    await idbPut(img.id, img.data);
+    delete img.data;
+  });
+  setTimeout(()=>save(),500); // save après les async
+})();
+
+
 
 function openIDB() {
   if(_idb) return Promise.resolve(_idb);
@@ -1740,22 +1925,6 @@ async function renderImageBank() {
   html+=`<div style="text-align:center;font-size:0.68rem;color:var(--gray);padding:8px">${total} photo${total>1?'s':''} — stockage IndexedDB persistant</div>`;
   c.innerHTML=html;
 }
-
-// Migrer éventuelles anciennes images base64 depuis state vers IndexedDB
-(async()=>{
-  if(!state.images) return;
-  let migrated=false;
-  for(const img of state.images){
-    if(img.data){
-      await idbPut(img.id, img.data);
-      delete img.data;
-      migrated=true;
-    }
-  }
-  if(migrated){ save(); console.log('Migration images → IDB OK'); }
-})();
-
-
 
 function toggleDay(i) {
   openDays[i] = !openDays[i];

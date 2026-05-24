@@ -132,6 +132,8 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
 .ic-paid-lbl{font-size:0.75rem;color:#555;}
 .map-link{display:inline-flex;align-items:center;gap:4px;font-size:0.68rem;color:var(--navy);background:var(--light);border:none;border-radius:20px;padding:4px 10px;cursor:pointer;text-decoration:none;margin-top:6px;}
 .map-link:active{background:var(--gold);color:white;}
+.map-mini{display:inline-flex;align-items:center;gap:3px;font-size:0.62rem;color:#2166ac;text-decoration:none;background:#e8f4fd;border-radius:12px;padding:2px 7px;flex-shrink:0;}
+.map-mini:active{background:#2166ac;color:white;}
 
 /* ── CHECKLIST ───────────────────────────────────────── */
 .cl-cat{margin-bottom:14px;}
@@ -320,7 +322,7 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
     </div>
     <br>
     <table class="budget-table">
-      <thead><tr><th>Catégorie</th><th>Total</th><th>Payé</th><th>Reste</th></tr></thead>
+      <thead><tr><th>Catégorie / Étape</th><th>Total</th><th>Statut</th><th>Reste</th></tr></thead>
       <tbody id="budget-rows"></tbody>
     </table>
   </div>
@@ -652,7 +654,15 @@ function cellEdit(el) {
 function togglePaid(type, id) {
   if(type==='itin') {
     const r = state.itinerary.find(r=>r.id===id);
-    if(r){ r.paye=!r.paye; save(); renderItinerary(); syncProgramme(); }
+    if(r){
+      r.paye=!r.paye;
+      // Si c'est une ligne hébergement, synchroniser l'hôtel correspondant
+      if(r.type==='sejour' && /(hébergement|hôtel)/i.test(r.nom)) {
+        const match = state.hotels.find(h => r.nom.toLowerCase().includes(h.ville.toLowerCase()));
+        if(match) match.paye = r.paye;
+      }
+      save(); renderItinerary(); syncBudget(); syncProgramme();
+    }
   }
 }
 
@@ -733,24 +743,60 @@ function hotelEdit(el) {
   const hid = el.dataset.hid;
   const field = el.dataset.hfield;
   const h = state.hotels.find(h=>h.id===hid);
-  if(h){ h[field]=el.textContent.trim(); save(); syncProgramme(); }
+  if(h){ h[field]=el.textContent.trim(); save(); syncBudget(); syncProgramme(); }
 }
 
 function toggleHotelPaid(hid) {
   const h = state.hotels.find(h=>h.id===hid);
-  if(h){ h.paye=!h.paye; save(); renderHotels(); syncProgramme(); }
+  if(h){
+    h.paye=!h.paye;
+    // Sync l'éventuelle ligne hébergement dans l'itinéraire
+    const hrow = state.itinerary.find(r=>r.type==='sejour' && /(hébergement|hôtel)/i.test(r.nom) && r.nom.toLowerCase().includes(h.ville.toLowerCase()));
+    if(hrow) hrow.paye = h.paye;
+    save(); renderHotels(); syncBudget(); syncProgramme();
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
    GARES
 ══════════════════════════════════════════════════════════ */
-let gareAddOpen = false;
+let gareInsertAfter = null; // id de la gare après laquelle on insère (null = fin)
+
+function gareFormHTML(gid) {
+  return `
+    <div class="add-form open" id="gare-form-${gid}" style="margin:6px 0 10px">
+      <div class="fg">
+        <input id="gf-ville-${gid}" placeholder="Ville (ex: Lyon)">
+        <select id="gf-type-${gid}"><option>Gare</option><option>Aéroport</option><option>Bus</option></select>
+        <div class="full"><input id="gf-nom-${gid}" placeholder="Nom officiel"></div>
+        <div class="full"><input id="gf-adresse-${gid}" placeholder="Adresse complète"></div>
+        <input id="gf-phone-${gid}" placeholder="Téléphone / info">
+        <input id="gf-heure-${gid}" placeholder="Date / heure de passage">
+        <div class="full"><input id="gf-notes-${gid}" placeholder="Notes (quai, terminal, navette…)"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-ok" onclick="confirmInsertGare('${gid}')">Ajouter</button>
+        <button class="btn-no" onclick="cancelInsertGare()">Annuler</button>
+      </div>
+    </div>`;
+}
 
 function renderGares() {
   const c = document.getElementById('gares-list');
-  const typeIcon = {Gare:'🚉', Aéroport:'✈️', Bus:'🚌'};
-  const typeColor= {Gare:'#1565c0', Aéroport:'#e65100', Bus:'#6a1b9a'};
-  c.innerHTML = state.gares.map(g=>`
+  const typeIcon  = {Gare:'🚉', Aéroport:'✈️', Bus:'🚌'};
+  const typeColor = {Gare:'#1565c0', Aéroport:'#e65100', Bus:'#6a1b9a'};
+
+  let html = '';
+
+  // Bouton insérer AVANT le premier élément
+  html += `<button class="insert-btn" onclick="showGareInsert('__first__')"
+    style="display:flex;align-items:center;gap:5px;color:var(--gold);font-size:0.72rem;background:none;border:2px dashed rgba(201,168,76,0.3);border-radius:8px;padding:4px 12px;cursor:pointer;width:100%;margin-bottom:6px">
+    ＋ Insérer ici en premier
+  </button>`;
+  if(gareInsertAfter === '__first__') html += gareFormHTML('__first__');
+
+  state.gares.forEach(g => {
+    html += `
     <div class="info-card" style="border-left-color:${typeColor[g.type]||'#1565c0'}">
       <div class="ic-header">
         <div style="flex:1;min-width:0">
@@ -765,8 +811,14 @@ function renderGares() {
             ${['Gare','Aéroport','Bus'].map(t=>'<option'+(g.type===t?' selected':'')+'>'+t+'</option>').join('')}
           </select>
         </div>
-        <button onclick="delGare('${g.id}')"
-          style="background:none;border:none;color:#ffbbbb;font-size:18px;cursor:pointer;padding:2px 6px;flex-shrink:0">🗑</button>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+          <button onclick="moveGare('${g.id}',-1)" title="Monter"
+            style="background:none;border:1px solid #eee;border-radius:5px;color:#888;font-size:13px;cursor:pointer;padding:2px 6px">↑</button>
+          <button onclick="moveGare('${g.id}',1)" title="Descendre"
+            style="background:none;border:1px solid #eee;border-radius:5px;color:#888;font-size:13px;cursor:pointer;padding:2px 6px">↓</button>
+          <button onclick="delGare('${g.id}')"
+            style="background:none;border:none;color:#ffbbbb;font-size:18px;cursor:pointer;padding:2px 6px">🗑</button>
+        </div>
       </div>
       <div class="ic-body">
         <div class="if">
@@ -793,29 +845,65 @@ function renderGares() {
         </div>
         <a class="map-link" href="https://maps.google.com/?q=${encodeURIComponent(g.nom+' '+g.adresse)}" target="_blank">📍 Ouvrir dans Maps</a>
       </div>
-    </div>
-  `).join('') + `
-    <div class="add-form" id="gareAddForm" style="margin-top:10px">
-      <div class="fg">
-        <input id="ga-ville" placeholder="Ville (ex: Lyon)">
-        <select id="ga-type"><option>Gare</option><option>Aéroport</option><option>Bus</option></select>
-        <div class="full"><input id="ga-nom" placeholder="Nom officiel (ex: Gare de Lyon-Part-Dieu)"></div>
-        <div class="full"><input id="ga-adresse" placeholder="Adresse complète"></div>
-        <input id="ga-phone" placeholder="Téléphone / info">
-        <input id="ga-heure" placeholder="Date / heure de passage">
-        <div class="full"><input id="ga-notes" placeholder="Notes (quai, terminal, navette…)"></div>
-      </div>
-      <div class="form-actions">
-        <button class="btn-ok" onclick="confirmAddGare()">Ajouter</button>
-        <button class="btn-no" onclick="cancelAddGare()">Annuler</button>
-      </div>
-    </div>
-    <button class="add-row-btn" onclick="toggleAddGare()" style="margin-top:10px">＋ Ajouter une gare / aéroport</button>
-  `;
-  if(gareAddOpen) {
-    const f = document.getElementById('gareAddForm');
-    if(f) f.classList.add('open');
+    </div>`;
+
+    // Bouton insérer APRÈS cette gare
+    html += `<button class="insert-btn" onclick="showGareInsert('${g.id}')"
+      style="display:flex;align-items:center;gap:5px;color:var(--gold);font-size:0.68rem;background:none;border:2px dashed rgba(201,168,76,0.25);border-radius:8px;padding:3px 12px;cursor:pointer;width:100%;margin:4px 0">
+      ＋ Insérer une gare ici ↓
+    </button>`;
+    if(gareInsertAfter === g.id) html += gareFormHTML(g.id);
+  });
+
+  // Bouton ajouter à la fin (distinct des inserts)
+  html += `<button class="add-row-btn" onclick="showGareInsert('__last__')" style="margin-top:6px">＋ Ajouter en dernier</button>`;
+  if(gareInsertAfter === '__last__') html += gareFormHTML('__last__');
+
+  c.innerHTML = html;
+
+  // Focus sur le formulaire ouvert
+  if(gareInsertAfter !== null) {
+    setTimeout(() => {
+      const f = document.getElementById('gare-form-'+gareInsertAfter);
+      if(f) {
+        f.scrollIntoView({behavior:'smooth', block:'center'});
+        const v = f.querySelector('input');
+        if(v) v.focus();
+      }
+    }, 100);
   }
+}
+
+function showGareInsert(afterId) {
+  gareInsertAfter = (gareInsertAfter === afterId) ? null : afterId;
+  renderGares();
+}
+
+function cancelInsertGare() { gareInsertAfter = null; renderGares(); }
+
+function confirmInsertGare(afterId) {
+  const ville = (document.getElementById('gf-ville-'+afterId)||{}).value.trim();
+  if(!ville) return alert('Entrez une ville');
+  const newGare = {
+    id:      'g'+Date.now(),
+    ville,
+    type:    document.getElementById('gf-type-'+afterId).value,
+    nom:     document.getElementById('gf-nom-'+afterId).value.trim(),
+    adresse: document.getElementById('gf-adresse-'+afterId).value.trim(),
+    phone:   document.getElementById('gf-phone-'+afterId).value.trim(),
+    heure:   document.getElementById('gf-heure-'+afterId).value.trim(),
+    notes:   document.getElementById('gf-notes-'+afterId).value.trim(),
+  };
+  if(afterId === '__first__') {
+    state.gares.unshift(newGare);
+  } else if(afterId === '__last__') {
+    state.gares.push(newGare);
+  } else {
+    const idx = state.gares.findIndex(g => g.id === afterId);
+    state.gares.splice(idx + 1, 0, newGare);
+  }
+  gareInsertAfter = null;
+  save(); renderGares();
 }
 
 function gareEdit(el) {
@@ -830,62 +918,49 @@ function gareTypeChange(gid, val) {
   if(g){ g.type=val; save(); renderGares(); }
 }
 
+function moveGare(gid, dir) {
+  const idx = state.gares.findIndex(g=>g.id===gid);
+  const newIdx = idx + dir;
+  if(newIdx < 0 || newIdx >= state.gares.length) return;
+  const tmp = state.gares[idx];
+  state.gares[idx] = state.gares[newIdx];
+  state.gares[newIdx] = tmp;
+  save(); renderGares();
+}
+
 function delGare(gid) {
   if(!confirm('Supprimer cette gare ?')) return;
   state.gares = state.gares.filter(g=>g.id!==gid);
   save(); renderGares();
 }
 
-function toggleAddGare() {
-  gareAddOpen = !gareAddOpen;
-  renderGares();
-  if(gareAddOpen) setTimeout(()=>{ const v=document.getElementById('ga-ville'); if(v){ v.scrollIntoView({behavior:'smooth',block:'center'}); v.focus(); }}, 150);
-}
-function cancelAddGare() { gareAddOpen=false; renderGares(); }
-
-function confirmAddGare() {
-  const ville = (document.getElementById('ga-ville')||{}).value.trim();
-  if(!ville) return alert('Entrez une ville');
-  state.gares.push({
-    id:      'g'+Date.now(),
-    ville,
-    type:    document.getElementById('ga-type').value,
-    nom:     document.getElementById('ga-nom').value.trim(),
-    adresse: document.getElementById('ga-adresse').value.trim(),
-    phone:   document.getElementById('ga-phone').value.trim(),
-    heure:   document.getElementById('ga-heure').value.trim(),
-    notes:   document.getElementById('ga-notes').value.trim(),
-  });
-  gareAddOpen = false;
-  save(); renderGares();
-}
-
 /* ══════════════════════════════════════════════════════════
    BUDGET
 ══════════════════════════════════════════════════════════ */
+function syncBudget() {
+  const sec = document.getElementById('sec-budget');
+  if(sec && sec.classList.contains('active')) renderBudget();
+}
+
 function renderBudget() {
-  const itin = state.itinerary;
+  const itin   = state.itinerary;
   const hotels = state.hotels;
 
-  // Transport
+  // ── Transport ──────────────────────────────────────────
   const trajets = itin.filter(r=>r.type==='trajet');
-  const tTotal = trajets.reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
-  const tPaye  = trajets.filter(r=>r.paye).reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
+  const tTotal  = trajets.reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
+  const tPaye   = trajets.filter(r=>r.paye).reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
 
-  // Hébergement
+  // ── Hébergement (source: state.hotels UNIQUEMENT) ──────
   const hTotal = hotels.reduce((s,h)=>s+(parseFloat(h.prix)||0),0);
   const hPaye  = hotels.filter(h=>h.paye).reduce((s,h)=>s+(parseFloat(h.prix)||0),0);
 
-  // Séjours in itinerary (for any manual entries)
-  const sejours = itin.filter(r=>r.type==='sejour');
-  const sTotal = sejours.reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
-  const sPaye  = sejours.filter(r=>r.paye).reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
-
   const grandTotal = tTotal + hTotal;
-  const grandPaye  = tPaye + hPaye;
+  const grandPaye  = tPaye  + hPaye;
   const grandReste = grandTotal - grandPaye;
   const pct = grandTotal>0 ? Math.round(grandPaye/grandTotal*100) : 0;
 
+  // ── Stats cards ───────────────────────────────────────
   document.getElementById('budget-stats').innerHTML = `
     <div class="bstat t"><div class="amt">${grandTotal.toFixed(0)} €</div><div class="lbl">Budget total estimé</div></div>
     <div class="bstat p"><div class="amt">${grandPaye.toFixed(0)} €</div><div class="lbl">Déjà payé ✓</div></div>
@@ -897,24 +972,59 @@ function renderBudget() {
     <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     <div style="font-size:0.68rem;color:var(--gray);margin-top:4px;">${grandPaye.toFixed(0)} € payés sur ${grandTotal.toFixed(0)} €</div>
   `;
+
+  // ── Tableau détaillé ──────────────────────────────────
+  // Transport rows
+  let tRows = '';
+  if(trajets.length) {
+    tRows = trajets.filter(r=>parseFloat(r.montant)>0).map(r=>`
+      <tr style="font-size:0.72rem">
+        <td style="padding:5px 10px;padding-left:22px;color:#555">${r.nom}</td>
+        <td style="padding:5px 10px">${parseFloat(r.montant).toFixed(0)} €</td>
+        <td style="padding:5px 10px">
+          <button class="paid-btn ${r.paye?'oui':'non'}" style="font-size:0.6rem;padding:2px 6px" onclick="togglePaid('itin',${r.id})">
+            ${r.paye?'✓ Payé':'✗ Non'}
+          </button>
+        </td>
+        <td style="padding:5px 10px;color:${r.paye?'var(--green)':'var(--red)'}">
+          ${r.paye ? '0 €' : parseFloat(r.montant).toFixed(0)+' €'}
+        </td>
+      </tr>`).join('');
+  }
+
+  // Hotel rows
+  let hRows = hotels.map(h=>`
+    <tr style="font-size:0.72rem">
+      <td style="padding:5px 10px;padding-left:22px;color:#555">${h.ville} · ${h.dates}</td>
+      <td style="padding:5px 10px">${parseFloat(h.prix||0).toFixed(0)} €</td>
+      <td style="padding:5px 10px">
+        <button class="paid-btn ${h.paye?'oui':'non'}" style="font-size:0.6rem;padding:2px 6px" onclick="toggleHotelPaid('${h.id}')">
+          ${h.paye?'✓ Payé':'✗ Non'}
+        </button>
+      </td>
+      <td style="padding:5px 10px;color:${h.paye?'var(--green)':'var(--red)'}">
+        ${h.paye ? '0 €' : parseFloat(h.prix||0).toFixed(0)+' €'}
+      </td>
+    </tr>`).join('');
+
   document.getElementById('budget-rows').innerHTML = `
-    <tr>
-      <td>🚂 Transport (billets)</td>
-      <td>${tTotal.toFixed(0)} €</td>
-      <td style="color:var(--green)">${tPaye.toFixed(0)} €</td>
-      <td style="color:var(--red)">${(tTotal-tPaye).toFixed(0)} €</td>
+    <tr style="background:var(--light)">
+      <td colspan="4" style="padding:7px 10px;font-weight:700;font-size:0.75rem;color:var(--navy)">
+        🚂 Transports — ${tPaye.toFixed(0)} € / ${tTotal.toFixed(0)} €
+      </td>
     </tr>
-    <tr>
-      <td>🏨 Hébergements</td>
-      <td>${hTotal.toFixed(0)} €</td>
-      <td style="color:var(--green)">${hPaye.toFixed(0)} €</td>
-      <td style="color:var(--red)">${(hTotal-hPaye).toFixed(0)} €</td>
+    ${tRows}
+    <tr style="background:var(--light)">
+      <td colspan="4" style="padding:7px 10px;font-weight:700;font-size:0.75rem;color:var(--navy)">
+        🏨 Hébergements — ${hPaye.toFixed(0)} € / ${hTotal.toFixed(0)} €
+      </td>
     </tr>
+    ${hRows}
     <tr class="sub-total">
       <td>💰 TOTAL</td>
       <td>${grandTotal.toFixed(0)} €</td>
-      <td style="color:var(--green)">${grandPaye.toFixed(0)} €</td>
-      <td style="color:var(--red)">${grandReste.toFixed(0)} €</td>
+      <td style="color:var(--green)">${grandPaye.toFixed(0)} € payé</td>
+      <td style="color:var(--red)">${grandReste.toFixed(0)} € reste</td>
     </tr>
   `;
 }
@@ -1023,10 +1133,16 @@ function renderProgramme() {
       trajets.forEach(r => {
         const ico = T_ICON[r.transport] || '🚗';
         const transColor = {Train:'#1565c0',FlixBus:'#1b5e20',Avion:'#e65100',Bus:'#6a1b9a',Voiture:'#880e4f'}[r.transport]||'#555';
+        const mapsDepart  = r.depart && r.depart!=='-' ? 'https://maps.google.com/?q='+encodeURIComponent(r.depart+' gare') : '';
+        const mapsArrivee = r.arrivee && r.arrivee!=='-' ? 'https://maps.google.com/?q='+encodeURIComponent(r.arrivee+' gare') : '';
         html += `<div class="prog-item" style="background:#f8f9ff;border-radius:7px;margin-bottom:4px;padding:6px 8px">
           <span class="prog-time" style="color:${transColor};font-size:1rem">${ico}</span>
           <span class="prog-desc">
             <strong style="color:#1a1a2e">${(r.depart && r.depart!=='-' && r.arrivee && r.arrivee!=='-') ? r.depart+' → '+r.arrivee : r.nom}</strong>
+            <span style="display:inline-flex;gap:4px;margin-left:5px">
+              ${mapsDepart ? '<a class=\'map-mini\' href=\''+mapsDepart+'\' target=\'_blank\'>📍 Départ</a>' : ''}
+              ${mapsArrivee ? '<a class=\'map-mini\' href=\''+mapsArrivee+'\' target=\'_blank\'>📍 Arrivée</a>' : ''}
+            </span>
             ${(r.notes||r.montant) ? '<br><span style="color:#888;font-size:0.7rem">'+r.notes+(r.montant ? ' &middot; <b style=\'color:var(--gold)\'>'+r.montant+' €</b>':'')+'</span>' : ''}
           </span>
         </div>`;
@@ -1040,8 +1156,10 @@ function renderProgramme() {
       actSejours.forEach(r => {
         html += `<div class="prog-item">
           <span class="prog-time">📌</span>
-          <span class="prog-desc type-visit"><strong>${r.nom}</strong>
-          ${r.notes ? '<br><span style="color:var(--gray);font-size:0.7rem">'+r.notes+'</span>' : ''}
+          <span class="prog-desc type-visit">
+            <strong>${r.nom}</strong>
+            <a class="map-mini" href="https://maps.google.com/?q=${encodeURIComponent(r.nom+' '+day.city)}" target="_blank">📍</a>
+            ${r.notes ? '<br><span style="color:var(--gray);font-size:0.7rem">'+r.notes+'</span>' : ''}
           </span>
         </div>`;
       });
@@ -1064,6 +1182,7 @@ function renderProgramme() {
         html += `<div class="prog-item" style="padding:3px 0">
           <span class="prog-time" style="font-size:.85rem">${TAG_ICON[v.tag]||'📍'}</span>
           <span class="prog-desc" style="font-size:0.76rem">${v.nom}</span>
+          <a class="map-mini" href="https://maps.google.com/?q=${encodeURIComponent(v.nom+' '+day.city)}" target="_blank">📍</a>
         </div>`;
       });
       if(mustVis.length > 4) html += `<div style="font-size:0.65rem;color:var(--gold);padding:2px 0 0 24px">+${mustVis.length-4} autres dans l’onglet 🏛️ Visites</div>`;
@@ -1097,146 +1216,136 @@ function toggleDay(jour) {
    VISITES PAR VILLE
 ══════════════════════════════════════════════════════════ */
 const DEFAULT_VISITES = [
-  { id:'v-bxl', ville:'Bruxelles', flag:'🇧🇪', dates:'12–14 juillet', open:false,
-    items:[
-      {id:'bxl1', nom:'Grand-Place', desc:'Plus belle place du monde selon Victor Hugo. Hôtel de Ville gothique, Maison du Roi. Très animée le soir.', tag:'must', done:false},
-      {id:'bxl2', nom:'Manneken Pis', desc:'Statue emblématique à 2 min de la Grand-Place. Souvent déguisé !', tag:'must', done:false},
-      {id:'bxl3', nom:'Galeries Royales Saint-Hubert', desc:'Galerie marchande couverte de 1847 – chocolatiers, librairies, cafés raffinés.', tag:'opt', done:false},
-      {id:'bxl4', nom:'Atomium', desc:'Monument iconique de l’Expo 58. Sphères géantes avec vue panoramique. ~15€ entrée.', tag:'opt', done:false},
-      {id:'bxl5', nom:'Quartier Sablon', desc:'Antiquités, chocolatiers Neuhaus & Wittamer, marché du week-end.', tag:'opt', done:false},
-      {id:'bxl6', nom:'Moules-frites / gaufres', desc:'Incontournable ! Restaurant recommandé : Chez Léon près de la Grand-Place.', tag:'food', done:false},
-    ]
-  },
-  { id:'v-lux', ville:'Luxembourg', flag:'🇱🇺', dates:'14–15 juillet', open:false,
-    items:[
-      {id:'lux1', nom:'Pont Adolphe', desc:'Pont néo-gothique de 1903 enjambant le Pétrusse. Vue imprenable depuis la Place de la Constitution.', tag:'must', done:false},
-      {id:'lux2', nom:'Cathédrale Notre-Dame', desc:'Style gothique Renaissance (XVIIe s). Crypte des Grands-Ducs. Entrée libre.', tag:'must', done:false},
-      {id:'lux3', nom:'Chemin de la Corniche', desc:'«Plus belle ballade d’Europe» – promenade sur les fortifications avec vue sur le Grund.', tag:'must', done:false},
-      {id:'lux4', nom:'Casemates du Bock', desc:'23 km de souterrains fortifiés creusés dans le rocher. ~8€. UNESCO.', tag:'must', done:false},
-      {id:'lux5', nom:'Quartier du Grund', desc:'Vieille ville au bord de l’Alzette, ruelles pavées, terrasses de cafés.', tag:'must', done:false},
-      {id:'lux6', nom:'Ascenseur Pfaffenthal', desc:'Funiculaire moderne et gratuit reliant la ville haute et basse. Vue spectaculaire.', tag:'opt', done:false},
-      {id:'lux7', nom:'Parc Kinnekswiss', desc:'Parc tranquille au cœur de la ville, idéal pour une pause.', tag:'free', done:false},
-      {id:'lux8', nom:'Plateau de Kirchberg', desc:'Quartier européen – Parlement Européen, CJUE, philharmonie moderne.', tag:'opt', done:false},
-    ]
-  },
-  { id:'v-ber', ville:'Berlin', flag:'🇩🇪', dates:'15–17 juillet', open:false,
-    items:[
-      {id:'ber1', nom:'Porte de Brandebourg', desc:'Symbole de la réunification allemande. À voir de jour et de nuit éclairée. Pariser Platz.', tag:'must', done:false},
-      {id:'ber2', nom:'Reichstag – coupole en verre', desc:'Coupole panoramique gratuite (réservation obligatoire sur bundestag.de). Vue 360° sur Berlin.', tag:'must', done:false},
-      {id:'ber3', nom:'Mémorial de l’Holocauste', desc:'2711 stèles de béton – très émouvant. Entrée gratuite. Sous-sol payant (~5€).', tag:'must', done:false},
-      {id:'ber4', nom:'East Side Gallery', desc:'1,3 km du Mur de Berlin couverts de fresques d’artistes du monde entier. Gratuit.', tag:'must', done:false},
-      {id:'ber5', nom:'Checkpoint Charlie', desc:'Ancien poste de contrôle allié. Musée sur place (~15€). Photo avec soldats en uniforme.', tag:'must', done:false},
-      {id:'ber6', nom:'Unter den Linden', desc:'Grande avenue depuis la Porte de Brandebourg jusqu’à l’île aux Musées.', tag:'must', done:false},
-      {id:'ber7', nom:'Cathédrale de Berlin (Berliner Dom)', desc:'Dôme imposant sur l’île aux Musées. Montée possible (~7€). Panorama sur la ville.', tag:'opt', done:false},
-      {id:'ber8', nom:'Alexanderplatz & Tour de télévision', desc:'Place centrale de l’ex-Berlin-Est. Tour TV (Fernsehturm) à 368 m – restaurant rotatif au sommet.', tag:'must', done:false},
-      {id:'ber9', nom:'Potsdamer Platz', desc:'Cœur de la reconstruction berlinoise post-chute du Mur. Architecture moderne spectaculaire.', tag:'opt', done:false},
-      {id:'ber10',nom:'Tiergarten', desc:'Grand parc central (200 ha). Idéal pour une pause entre deux visites.', tag:'free', done:false},
-      {id:'ber11',nom:'Siegessäule – Colonne de la Victoire', desc:'Montée possible (~3€). Vue sur l’axe est-ouest de Berlin depuis 67 m.', tag:'opt', done:false},
-      {id:'ber12',nom:'Mauerpark', desc:'Ancien "no man’s land" devenu parc et marché aux puces le dimanche. Karaoké en plein air !', tag:'opt', done:false},
-      {id:'ber13',nom:'Oberbaumbrücke', desc:'Pont gothique rouge sur la Spree reliant Kreuzberg et Friedrichshain. Très photogénique.', tag:'opt', done:false},
-      {id:'ber14',nom:'Currywurst & Döner', desc:'Spécialités berlinoises. Currywurst au Curry 36 (Kreuzberg) ou Konnopke. Döner au Mustafa’s.', tag:'food', done:false},
-    ]
-  },
-  { id:'v-var', ville:'Varsovie', flag:'🇵🇱', dates:'17–19 juillet', open:false,
-    items:[
-      {id:'var1', nom:'Vieille Ville – Rynek Starego Miasta', desc:'Entièrement reconstruite après WWII. UNESCO. Place du marché colorée avec ses maisons baroques.', tag:'must', done:false},
-      {id:'var2', nom:'Château Royal de Varsovie', desc:'Résidence des rois de Pologne. Collections d’art remarquables. ~20 zł entrée.', tag:'must', done:false},
-      {id:'var3', nom:'Palais de la Culture et de la Science', desc:'Gratte-ciel stalinien de 237 m. Terrasse panoramique au 30e étage (~20 zł). Très emblématique.', tag:'must', done:false},
-      {id:'var4', nom:'Nowy Świat & Krakowskie Przedmieście', desc:'Rue principale piétonne commerçante et historique, cafés et restaurants élégants.', tag:'must', done:false},
-      {id:'var5', nom:'Parc Łazienki Królewskie', desc:'Plus beau parc de Varsovie. Palais sur l’Eau, Belweder, paons en liberté. Gratuit.', tag:'must', done:false},
-      {id:'var6', nom:'Musée de l’Insurrection de Varsovie', desc:'Musée interactif et émouvant sur la résistance 1944. Prévoir 2-3h. ~25 zł.', tag:'must', done:false},
-      {id:'var7', nom:'Stade National PGE Narodowy', desc:'Le stade du foot polonais vu de l’extérieur et depuis la Vistule. Architecture originale.', tag:'opt', done:false},
-      {id:'var8', nom:'Quartier Praga', desc:'Quartier alternatif de l’Est : street art, galeries, hipster bars. Très authentique.', tag:'opt', done:false},
-      {id:'var9', nom:'Pierogi & Żurek', desc:'Spécialités polonaises. Restaurant : Bar Mleczny (snack-bar traditionnel très bon marché).', tag:'food', done:false},
-    ]
-  },
-  { id:'v-kra', ville:'Cracovie', flag:'🇵🇱', dates:'19–21 juillet', open:false,
-    items:[
-      {id:'kra1', nom:'Rynek Główny – Place du Marché', desc:'Plus grande place médiévale d’Europe. Halle aux draps (Sukiennice), statue de Mickiewicz. UNESCO.', tag:'must', done:false},
-      {id:'kra2', nom:'Basilique Sainte-Marie', desc:'Trompette jouée toutes les heures depuis la tour (hejnał). Autel de Wit Stwosz exceptionnel.', tag:'must', done:false},
-      {id:'kra3', nom:'Château du Wawel', desc:'Résidence royale sur une colline. Cathédrale, appartements royaux, trésor. ~25 zł sections.', tag:'must', done:false},
-      {id:'kra4', nom:'Grotte du Dragon du Wawel', desc:'Légende du dragon de Cracovie. Statue crachant du feu au bord de la Vistule. Entrée ~4 zł.', tag:'must', done:false},
-      {id:'kra5', nom:'Quartier Kazimierz', desc:'Ancien quartier juif. Synagogues, galeries, bars branchés, marché Plac Nowy. Incontournable.', tag:'must', done:false},
-      {id:'kra6', nom:'Excursion Auschwitz-Birkenau', desc:'J9 – Départ 08h06. Transport + visite guidée ~3h. Lieu de recueillement. Eau et snacks à prévoir.', tag:'must', done:false},
-      {id:'kra7', nom:'Balade le long de la Vistule', desc:'Planty (ceinture verte autour de la vieille ville) ou berges de la Vistule au coucher de soleil.', tag:'free', done:false},
-      {id:'kra8', nom:'Oscypek & Pierogi Ruskie', desc:'Fromage fumé des Tatras et raviolis polonais. Meilleurs près du marché Rynek.', tag:'food', done:false},
-    ]
-  },
-  { id:'v-vie', ville:'Vienne', flag:'🇦🇹', dates:'21–23 juillet', open:false,
-    items:[
-      {id:'vie1', nom:'Château de Schönbrunn', desc:'Résidence impériale des Habsbourg. Gloriette avec vue 360°. ~14-20€ selon formule. UNESCO.', tag:'must', done:false},
-      {id:'vie2', nom:'Stephansdom', desc:'Cathédrale gothique emblématique au cœur de Vienne. Montée tour nord ~5€. Gratuit à l’intérieur.', tag:'must', done:false},
-      {id:'vie3', nom:'Opéra de Vienne (Wiener Staatsoper)', desc:'Visite guidée possible (~9€). L’un des plus beaux opéras du monde. À voir de l’extérieur le soir.', tag:'must', done:false},
-      {id:'vie4', nom:'Belvedere', desc:'Palais baroque avec jardins. Musée Klimt (Le Baiser). Extérieurs gratuits, intérieur ~15€.', tag:'must', done:false},
-      {id:'vie5', nom:'MuseumsQuartier', desc:'2e complexe muséal du monde (Mumok, Kunsthalle, Léopold…). Quartier très animé le soir.', tag:'opt', done:false},
-      {id:'vie6', nom:'Naschmarkt', desc:'Grand marché viennois ouvert le matin. Olives, fromages, épices, saucisses. Idéal pour le déjeuner.', tag:'must', done:false},
-      {id:'vie7', nom:'Karlskirche – Karlsplatz', desc:'Église baroque de 1737. Ascenseur panoramique à l’intérieur jusqu’aux fresques (~10€).', tag:'opt', done:false},
-      {id:'vie8', nom:'Rathaus & Ringstrasse', desc:'Boulevard impérial avec Parlement, Burgtheater, Hôtel de Ville néo-gothique. Balade gratuite.', tag:'opt', done:false},
-      {id:'vie9', nom:'Stadtpark & Statue de Strauss', desc:'Parc central avec la célèbre statue dorée de Johann Strauss. Très photogénique. Gratuit.', tag:'free', done:false},
-      {id:'vie10',nom:'Apfelstrudel & Wiener Schnitzel', desc:'Incontournables ! Café Schwarzenberg ou Café Central pour un vrai Kaffee viennois.', tag:'food', done:false},
-    ]
-  },
-  { id:'v-bra', ville:'Bratislava', flag:'🇸🇰', dates:'23–25 juillet', open:false,
-    items:[
-      {id:'bra1', nom:'Château de Bratislava', desc:'Vue imprenable sur le Danube et l’Autriche. Musée de la Slovaquie à l’intérieur. ~8€.', tag:'must', done:false},
-      {id:'bra2', nom:'Vieille Ville – Staré Mesto', desc:'Entièrement piétonne. Place principale (Hlavné nám.), Hôtel de Ville, fontaines. Très agréable.', tag:'must', done:false},
-      {id:'bra3', nom:'Pont UFO – Most SNP', desc:'Pont suspendu des années 70 avec restaurant panoramique à 85 m. Montée ~7€ (déduite de la conso).', tag:'must', done:false},
-      {id:'bra4', nom:'Cathédrale Saint-Martin', desc:'Cathédrale gothique du XIVe s. où furent couronnés les rois de Hongrie. Entrée libre.', tag:'must', done:false},
-      {id:'bra5', nom:'Slavín Memorial', desc:'Cimetière militaire soviétique sur une colline avec panorama sur toute la ville. Gratuit.', tag:'opt', done:false},
-      {id:'bra6', nom:'Château de Devín', desc:'Ruines médiévales à la confluence du Danube et de la Morava. Bus 29 depuis le centre. ~5€.', tag:'must', done:false},
-      {id:'bra7', nom:'Eurovea Riverside', desc:'Promenade le long du Danube avec terrasses et vue sur l’Autriche. Gratuit.', tag:'free', done:false},
-      {id:'bra8', nom:'Bryndzové halušky & Kapustnica', desc:'Plats slovaques typiques. Dîner recommandé : Koliba Bratislava ou Slovak Pub.', tag:'food', done:false},
-    ]
-  },
-  { id:'v-bud', ville:'Budapest', flag:'🇭🇺', dates:'25–27 juillet', open:false,
-    items:[
-      {id:'bud1', nom:'Parlement de Budapest', desc:'3e plus grand parlement du monde (néo-gothique). Visite guidée ~8 000 HUF. Extérieur sublime.', tag:'must', done:false},
-      {id:'bud2', nom:'Pont des Chaînes (Széchenyi lánchíd)', desc:'Symbole de Budapest reliant Buda et Pest. À voir de nuit illuminé. Balade gratuite.', tag:'must', done:false},
-      {id:'bud3', nom:'Basilique Saint-Étienne', desc:'Relique de la main de saint Étienne. Tour panoramique ~500 HUF. Entrée libre.', tag:'must', done:false},
-      {id:'bud4', nom:'Place des Héros – Hősök tere', desc:'Place monumentale classée UNESCO avec les 7 chefs magyars. Musée des Beaux-Arts face à face.', tag:'must', done:false},
-      {id:'bud5', nom:'Château Vajdahunyad & Városliget', desc:'Château médiéval dans le parc de la ville. Lac, patinoire en hiver. Gratuit.', tag:'must', done:false},
-      {id:'bud6', nom:'Île Marguerite – Margitsziget', desc:'Île de 2,5 km dans le Danube : jardins, fontaine musicale, ruines médiévales. Gratuit.', tag:'must', done:false},
-      {id:'bud7', nom:'New York Café', desc:'«Plus beau café du monde». Décor extravagant Belle Époque. Café ~5€. À voir absolument.', tag:'must', done:false},
-      {id:'bud8', nom:'Avenue Andrássy', desc:'«Champs-Élysées hongrois» classé UNESCO. Boutiques, opéra, ambassades.', tag:'opt', done:false},
-      {id:'bud9', nom:'Liberty Bridge & Gellért', desc:'Pont vert Art Nouveau. Colline Gellért derrière avec citadelle et vue panoramique.', tag:'opt', done:false},
-      {id:'bud10',nom:'Bains thermaux Széchenyi', desc:'Les plus grands de Budapest. ~22€. Piscines intérieure/extérieure. Réserver en avance.', tag:'opt', done:false},
-      {id:'bud11',nom:'Goulash & Lángos', desc:'Goulash au restaurant Gerbeaud ou Borkonyha. Lángos (beignet frit) dans les marchés.', tag:'food', done:false},
-    ]
-  },
-  { id:'v-lju', ville:'Ljubljana', flag:'🇸🇮', dates:'27–29 juillet', open:false,
-    items:[
-      {id:'lju1', nom:'Château de Ljubljana', desc:'Funiculaire ou montée à pied (15 min). Panorama sur la ville et les Alpes. ~10€ funiculaire.', tag:'must', done:false},
-      {id:'lju2', nom:'Triple Bridge – Tromostovje', desc:'Trois ponts Art Nouveau enjambant la Ljubljanica. Cœur de la vieille ville.', tag:'must', done:false},
-      {id:'lju3', nom:'Pont du Dragon', desc:'4 dragons en bronze gardant le pont – symbole de la ville. Très photogénique.', tag:'must', done:false},
-      {id:'lju4', nom:'Place Prešeren', desc:'Place centrale avec la statue du poète et la Franziskanerkirche rose. Animation en soirée.', tag:'must', done:false},
-      {id:'lju5', nom:'Parc Tivoli', desc:'Grand parc verdoyant avec allées, fontaines et musée Tivoli. Gratuit.', tag:'free', done:false},
-      {id:'lju6', nom:'Nebotičnik Tower', desc:'Gratte-ciel art déco de 1933. Bar panoramique au 12e étage avec vue sur les Alpes.', tag:'opt', done:false},
-      {id:'lju7', nom:'Metelkova Art District', desc:'Ancienne caserne militaire reconvertie en espace culturel alternatif. Graffitis, galeries, bars.', tag:'opt', done:false},
-      {id:'lju8', nom:'Marché Central (Plečnik)', desc:'Marché couvert et en plein air le long de la Ljubljanica. Fruits, fromages, fleurs. Matin seulement.', tag:'must', done:false},
-      {id:'lju9', nom:'Promenade le long de la Ljubljanica', desc:'Berges piétonnes animées de cafés et restaurants en terrasse. Gratuit.', tag:'free', done:false},
-      {id:'lju10',nom:'Kranjska klobasa & Potica', desc:'Saucisse de Carniole grillée et gâteau roulé aux noix – spécialités slovènes.', tag:'food', done:false},
-    ]
-  },
-  { id:'v-zag', ville:'Zagreb', flag:'🇭🇷', dates:'29–31 juillet', open:false,
-    items:[
-      {id:'zag1', nom:'Place Ban Jelačić', desc:'Cœur animé de Zagreb. Statue équestre du ban Jelačić. Tramways, terrasses, vie locale.', tag:'must', done:false},
-      {id:'zag2', nom:'Cathédrale de Zagreb', desc:'Plus haute de Croatie (104 m). Néo-gothique. À voir la façade illuminée le soir. Entrée libre.', tag:'must', done:false},
-      {id:'zag3', nom:'Marché Dolac', desc:'«Le ventre de Zagreb». Étals colorés de fruits, légumes, fleurs. Matin uniquement. Gratuit.', tag:'must', done:false},
-      {id:'zag4', nom:'Haute Ville – Gornji Grad', desc:'Quartier médiéval avec ruelles pavées, tours médiévales, cafés pittoresques.', tag:'must', done:false},
-      {id:'zag5', nom:'Église Saint-Marc', desc:'Toit en tuiles vernissées aux armoiries de Zagreb et de Croatie. Très photogénique.', tag:'must', done:false},
-      {id:'zag6', nom:'Funiculaire de Zagreb', desc:'Le plus court du monde (66 m, 1 min). Relie la ville basse et haute. ~0,50€.', tag:'must', done:false},
-      {id:'zag7', nom:'Museum of Broken Relationships', desc:'Musée unique – objets donnés par des gens du monde entier après une rupture. ~7€. Très touchant.', tag:'must', done:false},
-      {id:'zag8', nom:'Cimetière Mirogoj', desc:'Nécropole monumentale avec arcades et coupoles. Œuvre de l’architecte Bollé. Gratuit.', tag:'opt', done:false},
-      {id:'zag9', nom:'Parc Maksimir', desc:'Plus grand parc de Zagreb (318 ha). Zoo sur place. Idéal pour le matin du J19.', tag:'opt', done:false},
-      {id:'zag10',nom:'Rue Tkalčićeva', desc:'Rue piétonne animée avec des dizaines de terrasses et cafés. Meilleure ambiance du soir.', tag:'opt', done:false},
-      {id:'zag11',nom:'Štrukli & Čevapčići', desc:'Štrukli : pâte farcie au fromage, spécialité de Zagreb. La Štrukle au marché Dolac !', tag:'food', done:false},
-    ]
-  },
-];
+  { id:'v-bxl', ville:'Bruxelles', flag:'🇧🇪', dates:'12–14 juillet', items:[
+    {id:'bxl1',nom:'Grand-Place',                    desc:'Plus belle place du monde. Hôtel de Ville gothique, Maison du Roi. Très animée le soir.',tag:'must',done:false},
+    {id:'bxl3',nom:'Galeries Royales Saint-Hubert',  desc:'2 min NE – galerie marchande de 1847. Chocolatiers, librairies, cafés.',tag:'opt',done:false},
+    {id:'bxl2',nom:'Manneken Pis',                   desc:'5 min SO de la Grand-Place. Statue emblématique souvent déguisée !',tag:'must',done:false},
+    {id:'bxl6',nom:'Moules-frites / gaufres',        desc:'Chez Léon recommandé (rue des Bouchers). Waffles près de la Grand-Place.',tag:'food',done:false},
+    {id:'bxl5',nom:'Quartier Sablon',                desc:'15 min S – antiquaires, chocolatiers Neuhaus & Wittamer, marché week-end.',tag:'opt',done:false},
+    {id:'bxl4',nom:'Atomium',                        desc:'Métro ligne 6 (Laeken). Sphères géantes, vue panoramique. ~15€.',tag:'opt',done:false},
+  ]},
+  { id:'v-lux', ville:'Luxembourg', flag:'🇱🇺', dates:'14–15 juillet', items:[
+    {id:'lux1',nom:'Pont Adolphe',                   desc:'10 min de la gare. Pont néo-gothique 1903. Vue depuis Place de la Constitution.',tag:'must',done:false},
+    {id:'lux2',nom:'Cathédrale Notre-Dame',           desc:'5 min N – gothique Renaissance XVIIe. Crypte des Grands-Ducs. Entrée libre.',tag:'must',done:false},
+    {id:'lux8',nom:'Palais Grand-Ducal',              desc:'2 min E de la cathédrale. Résidence officielle du Grand-Duc.',tag:'must',done:false},
+    {id:'lux3',nom:'Chemin de la Corniche',           desc:'"Plus belle ballade d\u2019Europe". Fortifications avec vue plongeante sur le Grund.',tag:'must',done:false},
+    {id:'lux4',nom:'Casemates du Bock',               desc:'Au bout de la Corniche. 23 km de souterrains UNESCO. ~8\u20ac.',tag:'must',done:false},
+    {id:'lux5',nom:'Quartier du Grund',               desc:'Descendre depuis le Bock – vieille ville au bord de l\u2019Alzette, terrasses.',tag:'must',done:false},
+    {id:'lux6',nom:'Ascenseur Pfaffenthal',           desc:'Funiculaire moderne gratuit reliant ville haute et basse. Vue spectaculaire.',tag:'opt',done:false},
+    {id:'lux7',nom:'Parc Kinnekswiss',                desc:'Pause tranquille après la montée. Gratuit.',tag:'free',done:false},
+    {id:'lux9',nom:'Plateau de Kirchberg',             desc:'Quartier européen – Parlement EU, CJUE, philharmonie. Proche hôtel Zurich.',tag:'opt',done:false},
+  ]},
+  { id:'v-ber', ville:'Berlin', flag:'🇩🇪', dates:'15–17 juillet', items:[
+    {id:'ber1',nom:'Porte de Brandebourg',            desc:'J4 – Symbole réunification. À voir illuminée le soir. Pariser Platz.',tag:'must',done:false},
+    {id:'ber2',nom:'Reichstag – coupole en verre',    desc:'2 min E. Réservation obligatoire bundestag.de. Vue 360° gratuite.',tag:'must',done:false},
+    {id:'ber3',nom:'Mémorial de l\u2019Holocauste',  desc:'5 min SO. 2711 stèles de béton. Très émouvant. Gratuit.',tag:'must',done:false},
+    {id:'ber6',nom:'Unter den Linden',                desc:'Grande avenue E vers l\u2019île aux Musées. 20 min de marche.',tag:'must',done:false},
+    {id:'ber7',nom:'Cathédrale de Berlin (Berliner Dom)',desc:'Au bout d\u2019Unter den Linden. Montée possible ~7\u20ac.',tag:'opt',done:false},
+    {id:'ber8',nom:'Alexanderplatz & Tour de télévision',desc:'10 min E du Dom. Tour TV 368 m. Restaurant rotatif au sommet.',tag:'must',done:false},
+    {id:'ber4',nom:'East Side Gallery',               desc:'J5 – Prendre S-Bahn. 1,3 km de fresques sur le Mur. Gratuit.',tag:'must',done:false},
+    {id:'ber13',nom:'Oberbaumbrücke',                 desc:'5 min SO de l\u2019East Side Gallery. Pont gothique rouge sur la Spree.',tag:'opt',done:false},
+    {id:'ber5',nom:'Checkpoint Charlie',              desc:'15 min O. Ancien poste frontière allié. Musée ~15\u20ac.',tag:'must',done:false},
+    {id:'ber9',nom:'Potsdamer Platz',                 desc:'15 min O. Architecture moderne post-chute du Mur.',tag:'opt',done:false},
+    {id:'ber10',nom:'Tiergarten',                     desc:'Grand parc central 200 ha. Traverser depuis Potsdamer Platz.',tag:'free',done:false},
+    {id:'ber11',nom:'Siegessäule – Colonne de la Victoire',desc:'Centre du Tiergarten. Montée ~3\u20ac. Vue axe est-ouest.',tag:'opt',done:false},
+    {id:'ber12',nom:'Mauerpark',                      desc:'Bus depuis Tiergarten. Marché aux puces dimanche, karaoké plein air !',tag:'opt',done:false},
+    {id:'ber14',nom:'Currywurst & Döner',             desc:'Curry 36 (Kreuzberg) ou Konnopke. Mustafa\u2019s pour Döner.',tag:'food',done:false},
+  ]},
+  { id:'v-var', ville:'Varsovie', flag:'🇵🇱', dates:'17–19 juillet', items:[
+    {id:'var2',nom:'Château Royal de Varsovie',       desc:'J6 – Tram depuis gare vers vieille ville. Collections d\u2019art royales. ~20 zł.',tag:'must',done:false},
+    {id:'var1',nom:'Vieille Ville – Rynek Starego Miasta',desc:'Juste à côté. Place baroque reconstituée après WWII. UNESCO.',tag:'must',done:false},
+    {id:'var4',nom:'Nowy Świat & Krakowskie Przedmieście',desc:'15 min S du château. Rue piétonne élégante, cafés et boutiques.',tag:'must',done:false},
+    {id:'var3',nom:'Palais de la Culture et de la Science',desc:'15 min O en tram. Terrasse panoramique 30e étage ~20 zł.',tag:'must',done:false},
+    {id:'var5',nom:'Parc Łazienki Królewskie',        desc:'J7 – Tram S (30 min). Palais sur l\u2019Eau, paons libres. Gratuit.',tag:'must',done:false},
+    {id:'var6',nom:'Musée de l\u2019Insurrection de Varsovie',desc:'Tram. Émouvant, interactif, sur 1944. ~25 zł. Prévoir 2-3h.',tag:'must',done:false},
+    {id:'var7',nom:'Stade National PGE Narodowy',     desc:'Bus vers la Vistule. Vue depuis les berges.',tag:'opt',done:false},
+    {id:'var8',nom:'Quartier Praga',                  desc:'Traverser la Vistule. Street art, galeries, ambiance authentique.',tag:'opt',done:false},
+    {id:'var9',nom:'Pierogi & Żurek',                 desc:'Bar Mleczny – snack-bar traditionnel très bon marché.',tag:'food',done:false},
+  ]},
+  { id:'v-kra', ville:'Cracovie', flag:'🇵🇱', dates:'19–21 juillet', items:[
+    {id:'kra1',nom:'Rynek Główny – Place du Marché',  desc:'10 min à pied de la gare. Plus grande place médiévale d\u2019Europe. UNESCO.',tag:'must',done:false},
+    {id:'kra2',nom:'Basilique Sainte-Marie',           desc:'Sur la place – trompette toutes les heures depuis la tour.',tag:'must',done:false},
+    {id:'kra3',nom:'Halle aux Draps (Sukiennice)',     desc:'Centre de la place. Marché artisanal souvenirs.',tag:'must',done:false},
+    {id:'kra4',nom:'Château du Wawel',                desc:'15 min S depuis Rynek. Résidence des rois de Pologne. ~25 zł.',tag:'must',done:false},
+    {id:'kra5',nom:'Grotte du Dragon du Wawel',       desc:'Au pied du château côté Vistule. Statue crachant du feu. ~4 zł.',tag:'must',done:false},
+    {id:'kra7',nom:'Balade le long de la Vistule',    desc:'Berges depuis château jusqu\u2019à Kazimierz. Vue superbe.',tag:'free',done:false},
+    {id:'kra6',nom:'Quartier Kazimierz',              desc:'20 min SE du Wawel. Synagogues, galeries, bars, marché Plac Nowy.',tag:'must',done:false},
+    {id:'kra8',nom:'Oscypek & Pierogi Ruskie',        desc:'Fromage fumé et raviolis près du marché Rynek.',tag:'food',done:false},
+    {id:'kra9',nom:'Excursion Auschwitz-Birkenau (J9)',desc:'Train 08h06 Kraków Główny → Oświęcim. Retour 17h37. Lieu de recueillement.',tag:'must',done:false},
+  ]},
+  { id:'v-vie', ville:'Vienne', flag:'🇦🇹', dates:'21–23 juillet', items:[
+    {id:'vie1a',nom:'Karlskirche – Karlsplatz',       desc:'J10 – 10 min de Wien Hbf. Baroque 1737. Ascenseur panoramique ~10\u20ac.',tag:'opt',done:false},
+    {id:'vie3',nom:'Opéra de Vienne (Wiener Staatsoper)',desc:'8 min N. Visite guidée ~9\u20ac. Illuminé magnifiquement le soir.',tag:'must',done:false},
+    {id:'vie6',nom:'Naschmarkt',                      desc:'5 min O de l\u2019Opéra. Grand marché viennois. Déjeuner idéal.',tag:'must',done:false},
+    {id:'vie5',nom:'MuseumsQuartier',                  desc:'10 min N. 2e complexe muséal du monde. Terrasse animée.',tag:'opt',done:false},
+    {id:'vie8',nom:'Rathaus & Ringstrasse',            desc:'Boulevard impérial – Parlement, Burgtheater, Rathaus en suite.',tag:'opt',done:false},
+    {id:'vie9',nom:'Volksgarten & Burggarten',         desc:'Parcs le long du Ring. Statue de Strauss dorée au Burggarten.',tag:'free',done:false},
+    {id:'vie2',nom:'Stephansdom',                     desc:'Centre de Vienne. Cathédrale gothique incontournable. Tour N ~5\u20ac.',tag:'must',done:false},
+    {id:'vie1',nom:'Château de Schönbrunn',            desc:'J11 – U4 Schönbrunn (y aller dès 9h). Résidence impériale ~14-20\u20ac.',tag:'must',done:false},
+    {id:'vie1b',nom:'Gloriette – Vue panoramique',    desc:'30 min de montée dans Schönbrunn. Vue 360° sur Vienne.',tag:'must',done:false},
+    {id:'vie4',nom:'Belvedere',                        desc:'U1 Südtiroler Platz. Musée Klimt (Le Baiser). Extérieur gratuit.',tag:'must',done:false},
+    {id:'vie7',nom:'Stadtpark',                        desc:'10 min N du Belvedere. Statue de Strauss, parc apaisant. Gratuit.',tag:'free',done:false},
+    {id:'vie10',nom:'Apfelstrudel & Wiener Schnitzel', desc:'Café Schwarzenberg ou Café Central pour un vrai Kaffee viennois.',tag:'food',done:false},
+  ]},
+  { id:'v-bra', ville:'Bratislava', flag:'🇸🇰', dates:'23–25 juillet', items:[
+    {id:'bra2',nom:'Vieille Ville – Staré Mesto',     desc:'J12 – 15 min de la gare. Entièrement piétonne, place principale, fontaines.',tag:'must',done:false},
+    {id:'bra4',nom:'Cathédrale Saint-Martin',          desc:'Au bord de la vieille ville. Gothique XIVe s. Entrée libre.',tag:'must',done:false},
+    {id:'bra1',nom:'Château de Bratislava',            desc:'15 min O depuis cathédrale. Vue Danube et Autriche. ~8\u20ac.',tag:'must',done:false},
+    {id:'bra5',nom:'Slavín Memorial',                 desc:'20 min N du château. Vue panoramique sur toute la ville. Gratuit.',tag:'opt',done:false},
+    {id:'bra3',nom:'Pont UFO – Most SNP',             desc:'Retour Danube. Restaurant panoramique à 85 m. Montée ~7\u20ac.',tag:'must',done:false},
+    {id:'bra7',nom:'Eurovea Riverside',               desc:'Long du Danube E du pont. Terrasses et vue vers l\u2019Autriche. Gratuit.',tag:'free',done:false},
+    {id:'bra6',nom:'Château de Devín',                desc:'J13 – Bus 29 (~30 min). Ruines médiévales à confluence Danube-Morava. ~5\u20ac.',tag:'must',done:false},
+    {id:'bra8b',nom:'Musée Danubiana',                desc:'Plus loin en bus. Art contemporain avec vue sur le Danube.',tag:'opt',done:false},
+    {id:'bra8a',nom:'Parc Sad Janka Kráľa',           desc:'Plus vieux parc public d\u2019Europe centrale. Retour vers centre.',tag:'free',done:false},
+    {id:'bra8',nom:'Bryndzové halušky & Koliba',      desc:'Dîner : Koliba Bratislava ou Slovak Pub (vieille ville).',tag:'food',done:false},
+  ]},
+  { id:'v-bud', ville:'Budapest', flag:'🇭🇺', dates:'25–27 juillet', items:[
+    {id:'bud1',nom:'Parlement de Budapest',           desc:'J14 – 15 min O de Keleti. Façade néo-gothique sur le Danube. ~8000 HUF.',tag:'must',done:false},
+    {id:'bud2',nom:'Pont des Chaînes (Széchenyi lánchíd)',desc:'10 min S. Symbole de Budapest illuminé la nuit.',tag:'must',done:false},
+    {id:'bud3',nom:'Basilique Saint-Étienne',         desc:'10 min E du pont. Relique de saint Étienne. Tour ~500 HUF.',tag:'must',done:false},
+    {id:'bud6',nom:'Île Marguerite – Margitsziget',   desc:'Bus 26 depuis Nyugati. Parc 2,5 km, fontaine musicale. Gratuit.',tag:'must',done:false},
+    {id:'bud4',nom:'Place des Héros – Hősök tere',    desc:'J15 – M1 Hősök tere. Place UNESCO, 7 chefs magyars.',tag:'must',done:false},
+    {id:'bud5',nom:'Château Vajdahunyad & Városliget',desc:'Juste derrière la place des Héros. Château dans le parc.',tag:'must',done:false},
+    {id:'bud10',nom:'Bains thermaux Széchenyi',       desc:'Dans Városliget. ~22\u20ac. Réserver en avance !',tag:'opt',done:false},
+    {id:'bud8',nom:'Avenue Andrássy',                 desc:'M1 jusqu\u2019à Oktogon. UNESCO. "Champs-Élysées hongrois".',tag:'opt',done:false},
+    {id:'bud7',nom:'House of Terror',                 desc:'Sur Andrássy. Extérieur emblématique du régime.',tag:'must',done:false},
+    {id:'bud9',nom:'New York Café',                   desc:'10 min E d\u2019Andrássy. "Plus beau café du monde". ~5\u20ac.',tag:'must',done:false},
+    {id:'bud11',nom:'Liberty Bridge',                 desc:'15 min SO. Pont Art Nouveau vert. Coucher de soleil sublime.',tag:'opt',done:false},
+    {id:'bud12',nom:'Goulash & Lángos',               desc:'Goulash au Gerbeaud (pl. Vörösmarty). Lángos dans les marchés.',tag:'food',done:false},
+  ]},
+  { id:'v-lju', ville:'Ljubljana', flag:'🇸🇮', dates:'27–29 juillet', items:[
+    {id:'lju4',nom:'Place Prešeren',                  desc:'J16 – 15 min de la gare. Cœur de la vieille ville.',tag:'must',done:false},
+    {id:'lju2',nom:'Triple Bridge – Tromostovje',     desc:'Juste à côté. 3 ponts Art Nouveau sur la Ljubljanica.',tag:'must',done:false},
+    {id:'lju3',nom:'Pont du Dragon',                  desc:'5 min E. 4 dragons en bronze, symbole de la ville.',tag:'must',done:false},
+    {id:'lju8',nom:'Marché Central (Plečnik)',         desc:'Bord de la Ljubljanica. Fruits, fromages. Matin uniquement.',tag:'must',done:false},
+    {id:'lju1',nom:'Château de Ljubljana',            desc:'Funiculaire ~10\u20ac ou montée 15 min. Panorama sur les Alpes.',tag:'must',done:false},
+    {id:'lju9',nom:'Promenade le long de la Ljubljanica',desc:'Berges piétonnes avec terrasses. Idéal pour l\u2019apéro du soir.',tag:'free',done:false},
+    {id:'lju5',nom:'Parc Tivoli',                     desc:'J17 – 15 min O du centre. Grand parc, allées, fontaines.',tag:'free',done:false},
+    {id:'lju6',nom:'Nebotičnik Tower',                desc:'Centre-ville. Bar panoramique au 12e étage. Vue sur les Alpes.',tag:'opt',done:false},
+    {id:'lju7',nom:'Metelkova Art District',           desc:'15 min NE. Caserne alternative, graffitis, galeries.',tag:'opt',done:false},
+    {id:'lju10',nom:'Kranjska klobasa & Potica',      desc:'Saucisse de Carniole grillée. Bar Pod Velbom ou marché central.',tag:'food',done:false},
+  ]},
+  { id:'v-zag', ville:'Zagreb', flag:'🇭🇷', dates:'29–31 juillet', items:[
+    {id:'zag1',nom:'Place Ban Jelačić',               desc:'J18 – 15 min de la gare. Cœur animé de Zagreb.',tag:'must',done:false},
+    {id:'zag3',nom:'Marché Dolac',                    desc:'2 min N. "Ventre de Zagreb". Chapeaux rouges. Matin uniquement.',tag:'must',done:false},
+    {id:'zag2',nom:'Cathédrale de Zagreb',            desc:'3 min E du marché. Plus haute de Croatie (104 m).',tag:'must',done:false},
+    {id:'zag6',nom:'Funiculaire de Zagreb',           desc:'5 min O. Le plus court du monde (66 m, 1 min). ~0,50\u20ac.',tag:'must',done:false},
+    {id:'zag4',nom:'Haute Ville – Gornji Grad',       desc:'Au sommet du funiculaire. Ruelles médiévales pavées.',tag:'must',done:false},
+    {id:'zag5',nom:'Église Saint-Marc',               desc:'Dans Gornji Grad. Toit en tuiles vernissées aux armoiries.',tag:'must',done:false},
+    {id:'zag7',nom:'Museum of Broken Relationships',  desc:'En Haute Ville. Unique au monde. ~7\u20ac.',tag:'must',done:false},
+    {id:'zag8c',nom:'Parc Zrinjevac',                 desc:'Redescendre en ville basse. Bandstand et fontaine.',tag:'free',done:false},
+    {id:'zag10',nom:'Rue Tkalčićeva',                 desc:'Rue piétonne animée, terrasses. Meilleure soirée de Zagreb.',tag:'opt',done:false},
+    {id:'zag8',nom:'Cimetière Mirogoj',               desc:'J19 – Bus 106 depuis Kaptol (20 min). Arcades monumentales.',tag:'opt',done:false},
+    {id:'zag9',nom:'Parc Maksimir & Zoo',             desc:'Tram 11/12 (20 min). Plus grand parc de Zagreb.',tag:'opt',done:false},
+    {id:'zag10b',nom:'Avenue Ilica',                  desc:'Retour centre. Plus longue rue de Zagreb, shopping local.',tag:'opt',done:false},
+    {id:'zag11',nom:'Štrukli & Čevapčići',           desc:'Štrukli au marché Dolac ou La Štrukle. Spécialité Zagreb.',tag:'food',done:false},
+  ]},
+]
 
 /* ── STATE VISITES ─────────────────────────────────────── */
-if(!state.visites) {
+if(!state.visites || !state.visitesV3) {
   state.visites = JSON.parse(JSON.stringify(DEFAULT_VISITES));
+  state.visitesV3 = true;
   save();
 }
 
@@ -1274,8 +1383,9 @@ function renderVisites() {
             <div class="vitem-body">
               <div class="vitem-nom" contenteditable="true" onblur="editVisiteField('${city.id}','${item.id}','nom',this)">${item.nom}</div>
               <div class="vitem-desc" contenteditable="true" onblur="editVisiteField('${city.id}','${item.id}','desc',this)">${item.desc||''}</div>
-              <div class="vitem-meta">
+              <div class="vitem-meta" style="flex-wrap:wrap;gap:5px">
                 <span class="vtag ${item.tag}" onclick="cycleTag('${city.id}','${item.id}')" title="Changer catégorie">${TAG_LABELS[item.tag]||item.tag}</span>
+                <a class="map-mini" href="https://maps.google.com/?q=${encodeURIComponent(item.nom+' '+city.ville)}" target="_blank">📍 Maps</a>
               </div>
             </div>
             <button class="vitem-del" onclick="delVisite('${city.id}','${item.id}')">🗑</button>

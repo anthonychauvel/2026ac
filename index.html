@@ -249,6 +249,64 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
 .vtag-opt.sel{border-color:currentColor;box-shadow:0 0 0 1px currentColor;}
 .vcard-prog{height:4px;background:#f0ece4;margin:0 14px 10px;border-radius:2px;overflow:hidden;}
 .vcard-prog-fill{height:100%;background:var(--green);border-radius:2px;transition:width .3s;}
+/* ── EXPORT PDF ──────────────────────────────────────── */
+.export-fab{position:fixed;bottom:20px;right:16px;z-index:500;background:var(--navy);color:var(--gold);border:none;border-radius:50px;padding:10px 16px;font-size:0.78rem;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,0.3);cursor:pointer;display:flex;align-items:center;gap:6px;}
+.export-fab:active{transform:scale(0.95);}
+.pdf-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:800;display:flex;align-items:flex-end;}
+.pdf-modal{background:white;border-radius:20px 20px 0 0;width:100%;padding:20px;max-height:90vh;overflow-y:auto;}
+.pdf-modal h2{font-family:Georgia,serif;font-size:1.1rem;color:var(--navy);margin-bottom:4px;}
+.pdf-modal .sub{font-size:0.72rem;color:var(--gray);margin-bottom:16px;}
+.pdf-section-toggle{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece4;}
+.pdf-section-toggle label{font-size:0.82rem;font-weight:600;color:#333;cursor:pointer;flex:1;}
+.pdf-section-toggle input[type=checkbox]{width:18px;height:18px;accent-color:var(--navy);cursor:pointer;}
+.pdf-launch{display:block;width:100%;padding:14px;background:var(--navy);color:var(--gold);border:none;border-radius:12px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:16px;text-align:center;}
+.pdf-launch:active{opacity:0.85;}
+.pdf-tip{font-size:0.68rem;color:var(--gray);text-align:center;margin-top:8px;line-height:1.5;}
+
+/* ── RENDU IMPRESSION ────────────────────────────────── */
+@media print {
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  body{background:white!important;padding:0!important;font-family:Georgia,serif;}
+  .header,.tabs,.content,.export-fab,.pdf-modal-bg{display:none!important;}
+  #pdf-render{display:block!important;}
+  .pdf-page{page-break-after:always;padding:20mm 18mm;min-height:100vh;position:relative;}
+  .pdf-page:last-child{page-break-after:avoid;}
+  .pdf-cover{background:linear-gradient(160deg,#16213e 0%,#0f3460 100%)!important;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:100vh;}
+  .pdf-cover h1{font-size:2.4rem;color:#c9a84c;margin-bottom:8px;}
+  .pdf-cover .sub{color:rgba(255,255,255,0.7);font-size:1rem;}
+  .pdf-cover .route{color:rgba(255,255,255,0.5);font-size:0.8rem;margin-top:16px;}
+  .pdf-section-header{border-bottom:3px solid #16213e;padding-bottom:6px;margin-bottom:14px;margin-top:0;}
+  .pdf-section-header h2{font-size:1.3rem;color:#16213e;margin:0;}
+  .pdf-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;}
+  .pdf-card{border:1px solid #e0ddd8;border-radius:8px;padding:10px;break-inside:avoid;}
+  .pdf-card h3{font-size:0.85rem;color:#16213e;margin-bottom:4px;border-bottom:1px solid #f0ece4;padding-bottom:4px;}
+  .pdf-card p{font-size:0.72rem;color:#555;margin:2px 0;line-height:1.4;}
+  .pdf-card .badge{display:inline-block;padding:1px 6px;border-radius:6px;font-size:0.6rem;font-weight:700;background:#e3f2fd;color:#1565c0;margin-bottom:4px;}
+  .pdf-table{width:100%;border-collapse:collapse;font-size:0.68rem;margin-bottom:12px;}
+  .pdf-table th{background:#16213e!important;color:#c9a84c;padding:5px 7px;text-align:left;}
+  .pdf-table td{padding:4px 7px;border-bottom:1px solid #f0ece4;}
+  .pdf-table tr.sejour td{background:#f0f5ff!important;}
+  .pdf-day-header{background:#f8f5f0!important;padding:6px 10px;border-left:4px solid #c9a84c;margin-bottom:6px;break-inside:avoid;break-before:auto;}
+  .pdf-day-header h3{font-size:0.9rem;color:#16213e;margin:0;}
+  .pdf-day-header .dt{font-size:0.65rem;color:#888;}
+  .pdf-visit-item{padding:3px 0;font-size:0.72rem;color:#333;border-bottom:1px solid #f8f5f0;}
+  .pdf-visit-tag{display:inline-block;padding:0 5px;border-radius:5px;font-size:0.58rem;font-weight:700;margin-right:4px;}
+  .pdf-must{background:#fde8e8!important;color:#c0392b;}
+  .pdf-opt{background:#e8f4fd!important;color:#2166ac;}
+  .pdf-food{background:#fef9e0!important;color:#9a6f00;}
+  .pdf-free{background:#e8faf0!important;color:#1e7e4f;}
+  .pdf-img-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;}
+  .pdf-img-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px;}
+  .pdf-img-cap{font-size:0.55rem;color:#888;text-align:center;margin-top:2px;}
+  .pdf-checklist-item{display:flex;align-items:center;gap:6px;font-size:0.72rem;padding:3px 0;break-inside:avoid;}
+  .pdf-check-box{width:12px;height:12px;border:1.5px solid #888;border-radius:3px;flex-shrink:0;}
+  .pdf-check-box.done{background:#2d9e6b!important;border-color:#2d9e6b;}
+  .pdf-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
+  .pdf-stat{border:1px solid #e0ddd8;border-radius:8px;padding:10px;text-align:center;}
+  .pdf-stat .val{font-size:1.4rem;font-weight:700;color:#16213e;}
+  .pdf-stat .lbl{font-size:0.65rem;color:#888;}
+}
+#pdf-render{display:none;}
 </style>
 </head>
 <body>
@@ -377,6 +435,36 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
   </div>
 
 </div>
+
+<!-- ═══ BOUTON EXPORT ══════════════════════════════════ -->
+<button class="export-fab" onclick="openPdfModal()">📄 Exporter PDF</button>
+
+<!-- ═══ MODAL OPTIONS PDF ══════════════════════════════ -->
+<div class="pdf-modal-bg" id="pdfModalBg" style="display:none" onclick="if(event.target===this)closePdfModal()">
+  <div class="pdf-modal">
+    <h2>📄 Exporter le carnet de route</h2>
+    <div class="sub">Sélectionnez les sections à inclure dans le PDF</div>
+    <div class="pdf-section-toggle"><label>🗓️ Page de couverture</label><input type="checkbox" id="pex-cover" checked></div>
+    <div class="pdf-section-toggle"><label>📅 Programme jour par jour</label><input type="checkbox" id="pex-prog" checked></div>
+    <div class="pdf-section-toggle"><label>🗺️ Tableau itinéraire complet</label><input type="checkbox" id="pex-itin" checked></div>
+    <div class="pdf-section-toggle"><label>🏨 Hôtels (noms & adresses)</label><input type="checkbox" id="pex-hotels" checked></div>
+    <div class="pdf-section-toggle"><label>🚉 Gares & Aéroports</label><input type="checkbox" id="pex-gares" checked></div>
+    <div class="pdf-section-toggle"><label>💰 Budget détaillé</label><input type="checkbox" id="pex-budget" checked></div>
+    <div class="pdf-section-toggle"><label>🏛️ Visites par ville</label><input type="checkbox" id="pex-visites" checked></div>
+    <div class="pdf-section-toggle"><label>📷 Photos importées</label><input type="checkbox" id="pex-photos" checked></div>
+    <div class="pdf-section-toggle"><label>✅ Checklist</label><input type="checkbox" id="pex-check" checked></div>
+    <button class="pdf-launch" onclick="launchPdf()">🖨️ Générer le PDF</button>
+    <div class="pdf-tip">
+      iPhone : Partager → Imprimer → Pincer sur l'aperçu → Enregistrer en PDF<br>
+      Android : Imprimer → Enregistrer au format PDF<br>
+      Pour envoyer par mail : joindre le PDF généré
+    </div>
+    <button onclick="closePdfModal()" style="display:block;width:100%;padding:10px;background:#f0f0f0;border:none;border-radius:10px;font-size:0.82rem;margin-top:8px;cursor:pointer">Annuler</button>
+  </div>
+</div>
+
+<!-- ═══ ZONE DE RENDU PDF (cachée, visible uniquement à l'impression) ═ -->
+<div id="pdf-render"></div>
 
 <div class="toast" id="toast">💾 Sauvegardé</div>
 
@@ -1925,6 +2013,259 @@ async function renderImageBank() {
   html+=`<div style="text-align:center;font-size:0.68rem;color:var(--gray);padding:8px">${total} photo${total>1?'s':''} — stockage IndexedDB persistant</div>`;
   c.innerHTML=html;
 }
+
+/* ══════════════════════════════════════════════════════════
+   EXPORT PDF — Génération du carnet de route
+══════════════════════════════════════════════════════════ */
+function openPdfModal(){ document.getElementById('pdfModalBg').style.display='flex'; }
+function closePdfModal(){ document.getElementById('pdfModalBg').style.display='none'; }
+
+async function launchPdf(){
+  closePdfModal();
+  const opt = {
+    cover:   document.getElementById('pex-cover').checked,
+    prog:    document.getElementById('pex-prog').checked,
+    itin:    document.getElementById('pex-itin').checked,
+    hotels:  document.getElementById('pex-hotels').checked,
+    gares:   document.getElementById('pex-gares').checked,
+    budget:  document.getElementById('pex-budget').checked,
+    visites: document.getElementById('pex-visites').checked,
+    photos:  document.getElementById('pex-photos').checked,
+    check:   document.getElementById('pex-check').checked,
+  };
+  const el = document.getElementById('pdf-render');
+  el.innerHTML = '<div style="position:fixed;inset:0;background:rgba(22,33,62,0.92);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Georgia,serif"><div style="font-size:1.3rem;color:#c9a84c;margin-bottom:8px">📄 Génération du PDF…</div><div style="font-size:0.78rem;color:rgba(255,255,255,0.6)">Patientez quelques secondes</div></div>';
+  await new Promise(r=>setTimeout(r,200));
+
+  let html = '';
+
+  // ── PAGE DE COUVERTURE ──────────────────────────────
+  if(opt.cover){
+    const cities = [...new Set(state.hotels.map(h=>h.ville))].join(' · ');
+    const trajets = state.itinerary.filter(r=>r.type==='trajet');
+    const totalT  = trajets.reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
+    const totalH  = state.hotels.reduce((s,h)=>s+(parseFloat(h.prix)||0),0);
+    html += `<div class="pdf-page pdf-cover">
+      <div style="font-size:3rem;margin-bottom:12px">🧭</div>
+      <h1>Le Rail des 10 Nations</h1>
+      <div class="sub">12 juillet – 31 juillet 2026 &nbsp;·&nbsp; 20 jours</div>
+      <div class="route" style="margin-top:20px;font-size:0.85rem;line-height:2">
+        🇫🇷 Brest → 🇧🇪 Bruxelles → 🇱🇺 Luxembourg → 🇩🇪 Berlin<br>
+        → 🇵🇱 Varsovie → 🇵🇱 Cracovie → 🇦🇹 Vienne<br>
+        → 🇸🇰 Bratislava → 🇭🇺 Budapest → 🇸🇮 Ljubljana → 🇭🇷 Zagreb
+      </div>
+      <div style="margin-top:30px;display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:340px">
+        <div style="background:rgba(255,255,255,0.08);padding:12px;border-radius:10px;text-align:center">
+          <div style="font-size:1.6rem;color:#c9a84c;font-weight:700">${state.hotels.length}</div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.5)">Hébergements</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.08);padding:12px;border-radius:10px;text-align:center">
+          <div style="font-size:1.6rem;color:#c9a84c;font-weight:700">${(totalT+totalH).toFixed(0)} €</div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.5)">Budget estimé</div>
+        </div>
+      </div>
+      <div style="position:absolute;bottom:20mm;color:rgba(255,255,255,0.3);font-size:0.65rem">Carnet généré le ${new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
+    </div>`;
+  }
+
+  // ── PROGRAMME JOUR PAR JOUR ─────────────────────────
+  if(opt.prog){
+    const T_ICO={Train:'🚂',FlixBus:'🟢',Avion:'✈️',Bus:'🚌',Voiture:'🚗','-':'—'};
+    html += `<div class="pdf-page"><div class="pdf-section-header"><h2>📅 Programme jour par jour</h2></div>`;
+    const DAYS_META_PDF=[
+      {jour:1,label:'Bruxelles',fullDate:'Dim 12 juillet',flag:'🇧🇪',matchDate:'12/07',city:'Bruxelles'},
+      {jour:2,label:'Bruxelles',fullDate:'Lun 13 juillet',flag:'🇧🇪',matchDate:'13/07',city:'Bruxelles'},
+      {jour:3,label:'Luxembourg',fullDate:'Mar 14 juillet',flag:'🇱🇺',matchDate:'14/07',city:'Luxembourg'},
+      {jour:4,label:'Berlin – arrivée',fullDate:'Mer 15 juillet',flag:'🇩🇪',matchDate:'15/07',city:'Berlin'},
+      {jour:5,label:'Berlin',fullDate:'Jeu 16 juillet',flag:'🇩🇪',matchDate:'16/07',city:'Berlin'},
+      {jour:6,label:'Varsovie – arrivée',fullDate:'Ven 17 juillet',flag:'🇵🇱',matchDate:'17/07',city:'Varsovie'},
+      {jour:7,label:'Varsovie',fullDate:'Sam 18 juillet',flag:'🇵🇱',matchDate:'18/07',city:'Varsovie'},
+      {jour:8,label:'Cracovie – arrivée',fullDate:'Dim 19 juillet',flag:'🇵🇱',matchDate:'19/07',city:'Cracovie'},
+      {jour:9,label:'Excursion Auschwitz',fullDate:'Lun 20 juillet',flag:'🇵🇱',matchDate:'20/07',city:'Cracovie'},
+      {jour:10,label:'Vienne – arrivée',fullDate:'Mar 21 juillet',flag:'🇦🇹',matchDate:'21/07',city:'Vienne'},
+      {jour:11,label:'Vienne',fullDate:'Mer 22 juillet',flag:'🇦🇹',matchDate:'22/07',city:'Vienne'},
+      {jour:12,label:'Bratislava – arrivée',fullDate:'Jeu 23 juillet',flag:'🇸🇰',matchDate:'23/07',city:'Bratislava'},
+      {jour:13,label:'Bratislava',fullDate:'Ven 24 juillet',flag:'🇸🇰',matchDate:'24/07',city:'Bratislava'},
+      {jour:14,label:'Budapest – arrivée',fullDate:'Sam 25 juillet',flag:'🇭🇺',matchDate:'25/07',city:'Budapest'},
+      {jour:15,label:'Budapest',fullDate:'Dim 26 juillet',flag:'🇭🇺',matchDate:'26/07',city:'Budapest'},
+      {jour:16,label:'Ljubljana – arrivée',fullDate:'Lun 27 juillet',flag:'🇸🇮',matchDate:'27/07',city:'Ljubljana'},
+      {jour:17,label:'Ljubljana',fullDate:'Mar 28 juillet',flag:'🇸🇮',matchDate:'28/07',city:'Ljubljana'},
+      {jour:18,label:'Zagreb – arrivée',fullDate:'Mer 29 juillet',flag:'🇭🇷',matchDate:'29/07',city:'Zagreb'},
+      {jour:19,label:'Zagreb',fullDate:'Jeu 30 juillet',flag:'🇭🇷',matchDate:'30/07',city:'Zagreb'},
+      {jour:20,label:'Retour en France',fullDate:'Ven 31 juillet',flag:'🇭🇷✈️🇫🇷',matchDate:'31/07',city:'Zagreb'},
+    ];
+    DAYS_META_PDF.forEach(day=>{
+      const rows = state.itinerary.filter(r=>r.date===day.matchDate);
+      const hotel = state.hotels.find(h=>h.ville===day.city);
+      const cityV = (state.visites||[]).find(v=>v.ville===day.city);
+      const topVisits = cityV ? cityV.items.filter(v=>!v.done).slice(0,3) : [];
+      html += `<div class="pdf-day-header"><h3>${day.flag} J${day.jour} – ${day.label}</h3><div class="dt">${day.fullDate} 2026</div></div>`;
+      rows.forEach(r=>{
+        if(r.type==='trajet'){
+          const title=(r.depart&&r.depart!=='-'&&r.arrivee&&r.arrivee!=='-')?r.depart+' → '+r.arrivee:r.nom;
+          html+=`<div class="pdf-visit-item">${T_ICO[r.transport]||'🚗'} <strong>${title}</strong> ${r.notes?'· '+r.notes:''} ${r.montant?'<strong style="color:#c9a84c">· '+r.montant+' €</strong>':''}</div>`;
+        } else {
+          const isHotel=/(hébergement|hôtel)/i.test(r.nom);
+          if(!isHotel && r.notes) html+=`<div class="pdf-visit-item">📌 <strong>${r.nom}</strong> – ${r.notes}</div>`;
+        }
+      });
+      if(topVisits.length) html+=topVisits.map(v=>`<div class="pdf-visit-item">⭐ ${v.nom} <span style="font-size:0.6rem;color:#888">– ${(v.desc||'').substring(0,60)}${(v.desc||'').length>60?'…':''}</span></div>`).join('');
+      if(hotel&&hotel.nom&&hotel.nom!=='À définir') html+=`<div style="padding:3px 0 3px 10px;border-left:3px solid #c9a84c;font-size:0.7rem;color:#555;margin-top:4px">🏨 ${hotel.nom} ${hotel.adresse?'· '+hotel.adresse:''}</div>`;
+      html+=`<div style="height:8px"></div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // ── TABLEAU ITINÉRAIRE ──────────────────────────────
+  if(opt.itin){
+    const trajets = state.itinerary.filter(r=>r.type==='trajet'&&parseFloat(r.montant)>0);
+    html += `<div class="pdf-page"><div class="pdf-section-header"><h2>🗺️ Itinéraire & Transports</h2></div>
+    <table class="pdf-table">
+      <thead><tr><th>Étape</th><th>Transport</th><th>Date</th><th>Horaires</th><th>Montant</th><th>Payé</th></tr></thead>
+      <tbody>
+      ${trajets.map(r=>`<tr>
+        <td><strong>${(r.depart&&r.depart!=='-')?r.depart+' → '+r.arrivee:r.nom}</strong></td>
+        <td>${r.transport}</td><td>${r.date}</td><td>${r.notes}</td>
+        <td>${r.montant} €</td><td>${r.paye?'✓':''}</td>
+      </tr>`).join('')}
+      <tr style="font-weight:700;background:#f8f5f0"><td colspan="4">TOTAL TRANSPORT</td>
+        <td>${trajets.reduce((s,r)=>s+(parseFloat(r.montant)||0),0).toFixed(0)} €</td>
+        <td>${trajets.filter(r=>r.paye).reduce((s,r)=>s+(parseFloat(r.montant)||0),0).toFixed(0)} € payé</td></tr>
+      </tbody>
+    </table></div>`;
+  }
+
+  // ── HÔTELS ─────────────────────────────────────────
+  if(opt.hotels){
+    html += `<div class="pdf-page"><div class="pdf-section-header"><h2>🏨 Hébergements</h2></div>
+    <div class="pdf-row">`;
+    state.hotels.forEach(h=>{
+      html += `<div class="pdf-card">
+        <div class="badge">${h.dates}</div>
+        <h3>🏙️ ${h.ville}</h3>
+        <p><strong>${h.nom||'—'}</strong></p>
+        ${h.adresse?`<p>📍 ${h.adresse}</p>`:''}
+        ${h.phone?`<p>📞 ${h.phone}</p>`:''}
+        ${h.notes?`<p><em>${h.notes}</em></p>`:''}
+        <p style="margin-top:6px;font-weight:700;color:${h.paye?'#2d9e6b':'#e05252'}">${h.prix} € ${h.paye?'✓ Payé':'✗ À payer'}</p>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // ── GARES ──────────────────────────────────────────
+  if(opt.gares){
+    html += `<div class="pdf-page"><div class="pdf-section-header"><h2>🚉 Gares & Aéroports</h2></div>
+    <div class="pdf-row">`;
+    state.gares.forEach(g=>{
+      const ico={Gare:'🚉',Aéroport:'✈️',Bus:'🚌'}[g.type]||'📍';
+      html += `<div class="pdf-card">
+        <div class="badge">${g.type}</div>
+        <h3>${ico} ${g.ville}</h3>
+        <p><strong>${g.nom||'—'}</strong></p>
+        ${g.adresse?`<p>📍 ${g.adresse}</p>`:''}
+        ${g.phone?`<p>📞 ${g.phone}</p>`:''}
+        ${g.heure?`<p>🕐 ${g.heure}</p>`:''}
+        ${g.notes?`<p><em>${g.notes}</em></p>`:''}
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // ── BUDGET ─────────────────────────────────────────
+  if(opt.budget){
+    const trajets=state.itinerary.filter(r=>r.type==='trajet');
+    const tT=trajets.reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
+    const tP=trajets.filter(r=>r.paye).reduce((s,r)=>s+(parseFloat(r.montant)||0),0);
+    const hT=state.hotels.reduce((s,h)=>s+(parseFloat(h.prix)||0),0);
+    const hP=state.hotels.filter(h=>h.paye).reduce((s,h)=>s+(parseFloat(h.prix)||0),0);
+    const gT=tT+hT, gP=tP+hP;
+    html += `<div class="pdf-page"><div class="pdf-section-header"><h2>💰 Budget</h2></div>
+    <div class="pdf-stat-grid">
+      <div class="pdf-stat"><div class="val">${gT.toFixed(0)} €</div><div class="lbl">Budget total estimé</div></div>
+      <div class="pdf-stat"><div class="val" style="color:#2d9e6b">${gP.toFixed(0)} €</div><div class="lbl">Déjà payé</div></div>
+      <div class="pdf-stat"><div class="val" style="color:#e05252">${(gT-gP).toFixed(0)} €</div><div class="lbl">Reste à payer</div></div>
+      <div class="pdf-stat"><div class="val">${gT>0?Math.round(gP/gT*100):0}%</div><div class="lbl">Réglé</div></div>
+    </div>
+    <table class="pdf-table">
+      <thead><tr><th>Catégorie</th><th>Montant</th><th>Payé</th><th>Reste</th></tr></thead>
+      <tbody>
+        <tr><td><strong>🚂 Transports</strong></td><td>${tT.toFixed(0)} €</td><td style="color:#2d9e6b">${tP.toFixed(0)} €</td><td style="color:#e05252">${(tT-tP).toFixed(0)} €</td></tr>
+        ${state.hotels.map(h=>`<tr><td style="padding-left:14px">${h.ville} (${h.dates})</td><td>${parseFloat(h.prix||0).toFixed(0)} €</td><td style="color:#2d9e6b">${h.paye?parseFloat(h.prix||0).toFixed(0)+' €':'—'}</td><td style="color:#e05252">${h.paye?'—':parseFloat(h.prix||0).toFixed(0)+' €'}</td></tr>`).join('')}
+        <tr style="font-weight:700"><td>TOTAL</td><td>${gT.toFixed(0)} €</td><td style="color:#2d9e6b">${gP.toFixed(0)} €</td><td style="color:#e05252">${(gT-gP).toFixed(0)} €</td></tr>
+      </tbody>
+    </table></div>`;
+  }
+
+  // ── VISITES ────────────────────────────────────────
+  if(opt.visites){
+    const tagCls={must:'pdf-must',opt:'pdf-opt',food:'pdf-food',free:'pdf-free'};
+    const tagLbl={must:'⭐ Incontournable',opt:'👍 Optionnel',food:'🍽️ Gastro',free:'🆓 Gratuit'};
+    html += `<div class="pdf-page"><div class="pdf-section-header"><h2>🏛️ Visites par ville</h2></div>`;
+    (state.visites||[]).forEach(city=>{
+      const done=city.items.filter(i=>i.done).length;
+      html+=`<div style="margin-bottom:12px;break-inside:avoid">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:1rem">${city.flag}</span>
+          <strong style="font-size:0.9rem;color:#16213e">${city.ville}</strong>
+          <span style="font-size:0.65rem;color:#888">${city.dates} · ${done}/${city.items.length} visités</span>
+        </div>`;
+      city.items.forEach(item=>{
+        html+=`<div class="pdf-visit-item${item.done?' done':''}">
+          <span class="pdf-visit-tag ${tagCls[item.tag]}">${tagLbl[item.tag]}</span>
+          <strong style="${item.done?'text-decoration:line-through;color:#888':''}">${item.nom}</strong>
+          ${item.desc?`<span style="color:#888;font-size:0.65rem"> – ${item.desc.substring(0,80)}${item.desc.length>80?'…':''}</span>`:''}
+        </div>`;
+      });
+      html+=`</div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // ── PHOTOS ─────────────────────────────────────────
+  if(opt.photos){
+    const all=state.images||[];
+    if(all.length){
+      const groups={};
+      all.forEach(img=>{ if(!groups[img.entityType])groups[img.entityType]=[]; groups[img.entityType].push(img); });
+      const typeLabel={hotel:'🏨 Hôtels',gare:'🚉 Gares',visite:'🏛️ Visites'};
+      html+=`<div class="pdf-page"><div class="pdf-section-header"><h2>📷 Photos</h2></div>`;
+      Object.entries(groups).forEach(([type,imgs])=>{
+        html+=`<div style="margin-bottom:14px"><strong style="font-size:0.82rem">${typeLabel[type]||type}</strong>
+          <div class="pdf-img-grid">`;
+        imgs.forEach(img=>{
+          if(img.thumb) html+=`<div><img src="${img.thumb}"><div class="pdf-img-cap">${img.caption||img.name}</div></div>`;
+        });
+        html+=`</div></div>`;
+      });
+      html+=`</div>`;
+    }
+  }
+
+  // ── CHECKLIST ──────────────────────────────────────
+  if(opt.check){
+    html+=`<div class="pdf-page"><div class="pdf-section-header"><h2>✅ Checklist</h2></div>`;
+    const cats=state.checklist||{};
+    Object.entries(cats).forEach(([cat,items])=>{
+      html+=`<div style="margin-bottom:10px;break-inside:avoid"><strong style="font-size:0.78rem;color:#16213e">${cat}</strong><div style="margin-top:4px">`;
+      items.forEach(item=>{
+        html+=`<div class="pdf-checklist-item">
+          <div class="pdf-check-box${item.done?' done':''}"></div>
+          <span style="${item.done?'text-decoration:line-through;color:#888':''}">${item.label}</span>
+        </div>`;
+      });
+      html+=`</div></div>`;
+    });
+    html+=`</div>`;
+  }
+
+  el.innerHTML = html;
+  await new Promise(r=>setTimeout(r,300));
+  window.print();
+  await new Promise(r=>setTimeout(r,1000));
+  el.innerHTML='';
+}
+
 
 function toggleDay(i) {
   openDays[i] = !openDays[i];

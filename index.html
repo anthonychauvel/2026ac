@@ -625,7 +625,7 @@ function confirmInsert(afterId) {
   const idx = state.itinerary.findIndex(r => r.id === afterId);
   state.itinerary.splice(idx + 1, 0, newRow);
   insertAfter = null;
-  save(); renderItinerary();
+  save(); renderItinerary(); syncProgramme();
 }
 
 function renderFooter() {
@@ -646,20 +646,20 @@ function cellEdit(el) {
   const id = parseInt(el.dataset.id);
   const field = el.dataset.field;
   const row = state.itinerary.find(r=>r.id===id);
-  if(row){ row[field] = el.textContent.trim(); save(); renderFooter(); }
+  if(row){ row[field] = el.textContent.trim(); save(); renderFooter(); syncProgramme(); }
 }
 
 function togglePaid(type, id) {
   if(type==='itin') {
     const r = state.itinerary.find(r=>r.id===id);
-    if(r){ r.paye=!r.paye; save(); renderItinerary(); }
+    if(r){ r.paye=!r.paye; save(); renderItinerary(); syncProgramme(); }
   }
 }
 
 function delRow(id) {
   if(!confirm('Supprimer cette étape ?')) return;
   state.itinerary = state.itinerary.filter(r=>r.id!==id);
-  save(); renderItinerary();
+  save(); renderItinerary(); syncProgramme();
 }
 
 let addOpen = false;
@@ -683,7 +683,7 @@ function addRow() {
   save();
   ['f-nom','f-date','f-depart','f-arrivee','f-notes','f-montant'].forEach(id=>document.getElementById(id).value='');
   toggleAddForm();
-  renderItinerary();
+  renderItinerary(); syncProgramme();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -733,12 +733,12 @@ function hotelEdit(el) {
   const hid = el.dataset.hid;
   const field = el.dataset.hfield;
   const h = state.hotels.find(h=>h.id===hid);
-  if(h){ h[field]=el.textContent.trim(); save(); }
+  if(h){ h[field]=el.textContent.trim(); save(); syncProgramme(); }
 }
 
 function toggleHotelPaid(hid) {
   const h = state.hotels.find(h=>h.id===hid);
-  if(h){ h.paye=!h.paye; save(); renderHotels(); }
+  if(h){ h.paye=!h.paye; save(); renderHotels(); syncProgramme(); }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -880,268 +880,139 @@ renderItinerary();
 renderHotels();
 renderGares();
 /* ══════════════════════════════════════════════════════════
-   PROGRAMME JOURNALIER (données du PDF)
+   PROGRAMME – SOURCE UNIQUE : state.itinerary / state.hotels / state.visites
+   Modifier n'importe où → tout se met à jour automatiquement
 ══════════════════════════════════════════════════════════ */
-const PROGRAMME = [
-  {jour:1, titre:"Bruxelles", date:"Dim 12 juillet 2026", flag:"🇧🇪", hotel:"À définir", items:[
-    {h:"12:00",t:"train", d:"🚂 Départ Gare de Brest"},
-    {h:"14:30",t:"info",  d:"📍 Arrivée Rennes – correspondance"},
-    {h:"15:35",t:"train", d:"🚂 Départ Rennes"},
-    {h:"19:17",t:"info",  d:"📍 Arrivée Bruxelles-Midi"},
-    {h:"Soir", t:"visit", d:"🚶 Balade centre-ville – Grand-Place, Manneken Pis, Galeries Royales Saint-Hubert"},
-  ]},
-  {jour:2, titre:"Bruxelles", date:"Lun 13 juillet 2026", flag:"🇧🇪", hotel:"(même hôtel)", items:[
-    {h:"Journée",t:"visit", d:"🏛️ Grand-Place"},
-    {h:"",       t:"visit", d:"🗿 Manneken Pis"},
-    {h:"",       t:"visit", d:"🏛️ Galeries Royales Saint-Hubert"},
-    {h:"Libre",  t:"info",  d:"Journée de repos & préparation du voyage"},
-  ]},
-  {jour:3, titre:"Luxembourg", date:"Mar 14 juillet 2026", flag:"🇱🇺", hotel:"Hôtel Zurich", items:[
-    {h:"08:32",t:"train", d:"🚂 Départ Bruxelles-Midi"},
-    {h:"11:49",t:"info",  d:"📍 Arrivée Gare de Luxembourg"},
-    {h:"12:15",t:"visit", d:"🌉 Pont Adolphe"},
-    {h:"12:45",t:"visit", d:"⛪ Cathédrale Notre-Dame de Luxembourg"},
-    {h:"13:10",t:"visit", d:"🏛️ Palais Grand-Ducal"},
-    {h:"13:30",t:"visit", d:"🛤️ Chemin de la Corniche (« plus belle ballade d'Europe »)"},
-    {h:"14:15",t:"visit", d:"🏰 Casemates du Bock (fortifications souterraines)"},
-    {h:"15:00",t:"visit", d:"🪨 Rocher du Bock – panorama sur la ville"},
-    {h:"16:00",t:"visit", d:"🏘️ Quartier du Grund – vieille ville au bord de l'Alzette"},
-    {h:"17:00",t:"visit", d:"🌊 Promenade le long de l'Alzette"},
-    {h:"18:00",t:"visit", d:"🛗 Ascenseur Pfaffenthal (gratuit, vue panoramique)"},
-    {h:"18:30",t:"visit", d:"🌳 Parc Kinnekswiss"},
-    {h:"19:30",t:"visit", d:"🏙️ Plateau de Kirchberg (quartier européen)"},
-    {h:"19:50",t:"hotel", d:"🏨 Check-in Hôtel Zurich"},
-  ]},
-  {jour:4, titre:"Berlin (arrivée)", date:"Mer 15 juillet 2026", flag:"🇩🇪", hotel:"Hôtel Martas Allegra", items:[
-    {h:"09:32",t:"train", d:"🚂 Départ Gare de Luxembourg"},
-    {h:"15:10",t:"info",  d:"📍 Arrivée Berlin Hauptbahnhof"},
-    {h:"15:30",t:"visit", d:"🚪 Porte de Brandebourg"},
-    {h:"16:00",t:"visit", d:"🏛️ Reichstag (Parlement allemand)"},
-    {h:"16:20",t:"visit", d:"🕍 Mémorial de l'Holocauste"},
-    {h:"17:00",t:"visit", d:"🛣️ Unter den Linden (avenue principale)"},
-    {h:"18:00",t:"visit", d:"⛪ Cathédrale de Berlin (Berliner Dom)"},
-    {h:"19:00",t:"visit", d:"🗼 Alexanderplatz & Tour de télévision"},
-    {h:"20:00",t:"hotel", d:"🏨 Check-in Hôtel Martas Allegra"},
-  ]},
-  {jour:5, titre:"Berlin", date:"Jeu 16 juillet 2026", flag:"🇩🇪", hotel:"Hôtel Martas Allegra", items:[
-    {h:"09:00",t:"visit", d:"🎨 East Side Gallery (1,3 km de fresques sur le Mur de Berlin)"},
-    {h:"10:00",t:"visit", d:"🌉 Oberbaumbrücke (pont gothique sur la Spree)"},
-    {h:"11:15",t:"visit", d:"🪖 Checkpoint Charlie (ancien poste frontière USA/URSS)"},
-    {h:"12:00",t:"visit", d:"🏙️ Potsdamer Platz"},
-    {h:"13:00",t:"food",  d:"🍽️ Déjeuner dans le centre"},
-    {h:"14:00",t:"visit", d:"🌳 Tiergarten (grand parc central)"},
-    {h:"15:00",t:"visit", d:"🗽 Siegessäule – Colonne de la Victoire (vue panoramique)"},
-    {h:"16:30",t:"visit", d:"🏟️ Mauerpark (marché aux puces & karaoké dominical)"},
-    {h:"18:30",t:"visit", d:"🗼 Alexanderplatz – soirée"},
-    {h:"20:00",t:"hotel", d:"🏨 Retour Hôtel Martas Allegra"},
-  ]},
-  {jour:6, titre:"Varsovie (arrivée)", date:"Ven 17 juillet 2026", flag:"🇵🇱", hotel:"Sound Garden Hotel Airport", items:[
-    {h:"08:30",t:"train", d:"🚂 Départ Berlin Hauptbahnhof"},
-    {h:"14:00",t:"info",  d:"📍 Arrivée Warszawa Centralna"},
-    {h:"14:10",t:"visit", d:"🏛️ Palais de la Culture et de la Science (gratte-ciel stalinien)"},
-    {h:"14:45",t:"visit", d:"🛍️ Centre commercial Złote Tarasy"},
-    {h:"15:10",t:"info",  d:"🚋 Tram direction hôtel"},
-    {h:"15:40",t:"visit", d:"🌳 Parc Szczęśliwicki"},
-    {h:"16:30",t:"hotel", d:"🏨 Check-in Sound Garden Hotel Airport"},
-    {h:"18:00",t:"visit", d:"🏘️ Vieille Ville – Rynek Starego Miasta (place centrale reconstituée)"},
-    {h:"19:00",t:"visit", d:"🏰 Château Royal de Varsovie"},
-    {h:"20:00",t:"visit", d:"🛣️ Nowy Świat – rue commerçante animée"},
-  ]},
-  {jour:7, titre:"Varsovie", date:"Sam 18 juillet 2026", flag:"🇵🇱", hotel:"Sound Garden Hotel Airport", items:[
-    {h:"09:45",t:"visit", d:"🌳 Parc Łazienki Królewskie (parc royal)"},
-    {h:"10:30",t:"visit", d:"🏛️ Palais sur l'Eau (Pałac na Wyspie)"},
-    {h:"11:15",t:"visit", d:"🏛️ Belweder (résidence présidentielle)"},
-    {h:"12:00",t:"visit", d:"🏟️ Stade National PGE Narodowy"},
-    {h:"13:00",t:"visit", d:"🌊 Balade le long de la Vistule"},
-    {h:"14:30",t:"visit", d:"🏛️ Musée de l'Insurrection de Varsovie"},
-    {h:"16:00",t:"visit", d:"🏛️ Palais de la Culture – panorama depuis le 30e étage"},
-    {h:"17:30",t:"visit", d:"🎨 Quartier Praga – street art & galeries"},
-    {h:"19:00",t:"food",  d:"🍽️ Dîner & balade Nowy Świat"},
-    {h:"20:30",t:"hotel", d:"🏨 Retour hôtel"},
-  ]},
-  {jour:8, titre:"Cracovie (arrivée)", date:"Dim 19 juillet 2026", flag:"🇵🇱", hotel:"Hôtel Krakus", items:[
-    {h:"09:00",t:"train", d:"🚂 Départ Warszawa Centralna"},
-    {h:"11:25",t:"info",  d:"📍 Arrivée Kraków Główny"},
-    {h:"11:40",t:"visit", d:"🏛️ Place du Marché – Rynek Główny (plus grande place médiévale d'Europe)"},
-    {h:"12:15",t:"visit", d:"⛪ Basilique Sainte-Marie (trompette à la tour toutes les heures)"},
-    {h:"12:45",t:"visit", d:"🏛️ Halle aux Draps (Sukiennice) – marché artisanal"},
-    {h:"13:30",t:"visit", d:"🏰 Château du Wawel (résidence des rois de Pologne)"},
-    {h:"14:30",t:"visit", d:"🐉 Grotte du Dragon du Wawel"},
-    {h:"15:00",t:"visit", d:"🌊 Balade le long de la Vistule"},
-    {h:"16:15",t:"hotel", d:"🏨 Check-in Hôtel Krakus"},
-    {h:"18:30",t:"visit", d:"🏘️ Quartier Kazimierz (ancien quartier juif – bars, galeries, synagogues)"},
-  ]},
-  {jour:9, titre:"Excursion Auschwitz", date:"Lun 20 juillet 2026", flag:"🇵🇱", hotel:"Hôtel Krakus", items:[
-    {h:"08:06",t:"train", d:"🚂 Départ Kraków Główny → Oświęcim (Auschwitz)"},
-    {h:"09:00",t:"visit", d:"🕍 Visite Auschwitz I – musée principal"},
-    {h:"11:30",t:"visit", d:"🕍 Transfert & visite Auschwitz II – Birkenau"},
-    {h:"14:00",t:"info",  d:"☕ Fin de visite – pause déjeuner"},
-    {h:"15:30",t:"visit", d:"🕯️ Temps libre – Mémorial extérieur"},
-    {h:"17:37",t:"train", d:"🚂 Retour Cracovie"},
-    {h:"⚠️",   t:"info",  d:"Prévoir eau, snacks, chaussures confort. Lieu sensible, respect indispensable. Photos limitées."},
-  ]},
-  {jour:10, titre:"Vienne (arrivée)", date:"Mar 21 juillet 2026", flag:"🇦🇹", hotel:"a&o Wien Stadthalle", items:[
-    {h:"06:20",t:"train", d:"🚂 Départ Kraków Główny"},
-    {h:"13:00",t:"info",  d:"📍 Arrivée Wien Hauptbahnhof"},
-    {h:"13:25",t:"visit", d:"⛪ Karlskirche – église baroque (Karlsplatz)"},
-    {h:"14:00",t:"visit", d:"🎭 Wiener Staatsoper – Opéra de Vienne (extérieur)"},
-    {h:"14:20",t:"visit", d:"🏛️ Parlement autrichien"},
-    {h:"14:45",t:"visit", d:"🏛️ Rathaus (Hôtel de ville néo-gothique)"},
-    {h:"15:10",t:"visit", d:"🌳 Volksgarten & Burggarten"},
-    {h:"15:45",t:"visit", d:"🎨 MuseumsQuartier (2e plus grand complexe muséal du monde)"},
-    {h:"16:30",t:"visit", d:"🏛️ Maria-Theresien-Platz (entre KHM et NHM)"},
-    {h:"17:10",t:"info",  d:"➡️ Direction hôtel"},
-    {h:"17:30",t:"hotel", d:"🏨 Check-in a&o Wien Stadthalle"},
-    {h:"19:00",t:"visit", d:"⛪ Stephansdom (cathédrale gothique – centre de Vienne)"},
-    {h:"20:00",t:"visit", d:"🛣️ Graben & Kohlmarkt – rues piétonnes"},
-  ]},
-  {jour:11, titre:"Vienne", date:"Mer 22 juillet 2026", flag:"🇦🇹", hotel:"a&o Wien Stadthalle", items:[
-    {h:"09:00",t:"info",  d:"🚶 Départ de l'hôtel"},
-    {h:"09:30",t:"visit", d:"🏰 Château de Schönbrunn (résidence impériale – 1441 pièces)"},
-    {h:"10:45",t:"visit", d:"🏛️ Gloriette – panorama sur Vienne"},
-    {h:"12:00",t:"food",  d:"🍽️ Déjeuner autour de Schönbrunn"},
-    {h:"13:15",t:"visit", d:"🛍️ Naschmarkt (marché viennois – olives, fromages, épices)"},
-    {h:"14:45",t:"visit", d:"🏛️ Belvedere – palais baroque (extérieurs)"},
-    {h:"16:00",t:"visit", d:"🌳 Stadtpark (statue de Strauss dorée)"},
-    {h:"17:15",t:"visit", d:"🏘️ Innere Stadt – centre historique UNESCO"},
-    {h:"19:00",t:"food",  d:"🍽️ Dîner dans le centre"},
-    {h:"21:00",t:"hotel", d:"🏨 Retour hôtel"},
-  ]},
-  {jour:12, titre:"Bratislava (arrivée)", date:"Jeu 23 juillet 2026", flag:"🇸🇰", hotel:"Pension Zlata Noha", items:[
-    {h:"10:15",t:"train", d:"🚂 Départ Wien Hauptbahnhof"},
-    {h:"11:21",t:"info",  d:"📍 Arrivée Bratislava Hlavná Stanica"},
-    {h:"11:35",t:"visit", d:"🕍 Slavín Memorial (cimetière militaire soviétique – panorama)"},
-    {h:"12:30",t:"visit", d:"🏰 Château de Bratislava (vue sur le Danube et l'Autriche)"},
-    {h:"13:30",t:"visit", d:"🏘️ Vieille Ville – Staré Mesto (piétonne et animée)"},
-    {h:"14:30",t:"visit", d:"⛪ Cathédrale Saint-Martin (couronnement des rois de Hongrie)"},
-    {h:"15:00",t:"visit", d:"🌉 Pont UFO – Most SNP (restaurant panoramique au sommet)"},
-    {h:"16:00",t:"visit", d:"🌊 Balade bords du Danube – Eurovea"},
-    {h:"17:30",t:"hotel", d:"🏨 Check-in Pension Zlata Noha"},
-    {h:"19:00",t:"food",  d:"🍽️ Dîner recommandé : Koliba Bratislava (cuisine slovaque traditionnelle)"},
-  ]},
-  {jour:13, titre:"Bratislava", date:"Ven 24 juillet 2026", flag:"🇸🇰", hotel:"Pension Zlata Noha", items:[
-    {h:"09:00",t:"info",  d:"🚶 Départ Pension Zlata Noha"},
-    {h:"10:00",t:"visit", d:"🏰 Château de Devín (ruines du Xe s. sur falaise – Danube & Morava)"},
-    {h:"12:00",t:"visit", d:"🎨 Musée Danubiana Meulensteen (art contemporain, bords du Danube)"},
-    {h:"14:00",t:"visit", d:"🌳 Parc Sad Janka Kráľa (plus vieux parc public d'Europe centrale)"},
-    {h:"15:30",t:"visit", d:"🌊 Eurovea Riverside – promenade & shopping"},
-    {h:"17:00",t:"visit", d:"🏘️ Staré Mesto – balade dans la vieille ville"},
-    {h:"18:30",t:"food",  d:"🍽️ Dîner : Slovak Pub (plats typiques slovaques)"},
-    {h:"20:00",t:"hotel", d:"🏨 Retour Pension Zlata Noha"},
-  ]},
-  {jour:14, titre:"Budapest (arrivée)", date:"Sam 25 juillet 2026", flag:"🇭🇺", hotel:"Hôtel Metro", items:[
-    {h:"08:10",t:"train", d:"🚂 Départ Bratislava"},
-    {h:"10:33",t:"info",  d:"📍 Arrivée Budapest Keleti"},
-    {h:"10:45",t:"visit", d:"🏛️ Parlement de Budapest – Országház (néo-gothique, 3e plus grand du monde)"},
-    {h:"11:30",t:"visit", d:"🌊 Promenade bords du Danube – Pont des Chaînes"},
-    {h:"12:15",t:"visit", d:"⛪ Basilique Saint-Étienne (relique de la main droite de Saint-Étienne)"},
-    {h:"13:00",t:"hotel", d:"🏨 Check-in Hôtel Metro"},
-    {h:"15:00",t:"visit", d:"🏝️ Île Marguerite – Margitsziget (parc, fontaines, ruines médiévales)"},
-    {h:"18:30",t:"food",  d:"🍽️ Dîner & balade"},
-    {h:"20:30",t:"hotel", d:"🏨 Retour hôtel"},
-  ]},
-  {jour:15, titre:"Budapest", date:"Dim 26 juillet 2026", flag:"🇭🇺", hotel:"Hôtel Metro", items:[
-    {h:"09:20",t:"visit", d:"🏛️ Hősök tere – Place des Héros (classée UNESCO)"},
-    {h:"10:00",t:"visit", d:"🌳 Városliget – parc de la ville"},
-    {h:"10:30",t:"visit", d:"🏰 Château Vajdahunyad (mélange de styles architecturaux)"},
-    {h:"11:30",t:"visit", d:"🛣️ Avenue Andrássy (UNESCO – boutiques, ambassades)"},
-    {h:"12:30",t:"food",  d:"🍽️ Déjeuner sur Andrássy"},
-    {h:"14:00",t:"visit", d:"🏛️ House of Terror (musée du régime fasciste et soviétique) – extérieur"},
-    {h:"15:00",t:"visit", d:"☕ New York Café (café Belle Époque le plus beau du monde)"},
-    {h:"16:00",t:"visit", d:"🛍️ Váci Utca – rue commerçante principale"},
-    {h:"18:00",t:"visit", d:"🌉 Liberty Bridge (pont de la Liberté – vue au coucher de soleil)"},
-    {h:"19:30",t:"food",  d:"🍽️ Dîner côté Kalvin Tér"},
-    {h:"22:00",t:"hotel", d:"🏨 Retour hôtel"},
-  ]},
-  {jour:16, titre:"Ljubljana (arrivée)", date:"Lun 27 juillet 2026", flag:"🇸🇮", hotel:"B&B Hotel Park", items:[
-    {h:"07:00",t:"train", d:"🚂 Départ Budapest Keleti"},
-    {h:"14:00",t:"info",  d:"📍 Arrivée Gare de Ljubljana"},
-    {h:"14:15",t:"visit", d:"🌉 Pont du Dragon (4 dragons en bronze – symbole de la ville)"},
-    {h:"14:40",t:"visit", d:"🌉 Triple Bridge – Tromostovje (3 ponts sur la Ljubljanica)"},
-    {h:"15:00",t:"visit", d:"🏛️ Place Prešeren (cœur de la vieille ville)"},
-    {h:"16:00",t:"visit", d:"🏰 Château de Ljubljana (funiculaire ou montée à pied – panorama)"},
-    {h:"17:30",t:"hotel", d:"🏨 Check-in B&B Hotel Park"},
-    {h:"18:30",t:"visit", d:"🏘️ Vieille Ville de Ljubljana"},
-    {h:"20:00",t:"food",  d:"🍽️ Dîner en bord de rivière Ljubljanica"},
-  ]},
-  {jour:17, titre:"Ljubljana", date:"Mar 28 juillet 2026", flag:"🇸🇮", hotel:"B&B Hotel Park", items:[
-    {h:"09:00",t:"info",  d:"🚶 Départ B&B Hotel Park"},
-    {h:"09:20",t:"visit", d:"🌳 Parc Tivoli (plus grand parc de Ljubljana)"},
-    {h:"10:30",t:"visit", d:"🏛️ Tivoli Mansion – International Centre of Graphic Arts"},
-    {h:"11:30",t:"visit", d:"🗼 Nebotičnik Tower – vue panoramique depuis le café au sommet"},
-    {h:"12:30",t:"food",  d:"🍽️ Déjeuner dans le centre"},
-    {h:"14:00",t:"visit", d:"🎨 Metelkova Art District (ancienne caserne reconvertie en espace culturel alternatif)"},
-    {h:"15:30",t:"visit", d:"🌊 Promenade sur la Ljubljanica"},
-    {h:"17:00",t:"visit", d:"🛍️ Marché Central (légumes, fromages, artisanat)"},
-    {h:"19:00",t:"food",  d:"🍽️ Dîner en vieille ville"},
-    {h:"21:00",t:"hotel", d:"🏨 Retour hôtel"},
-  ]},
-  {jour:18, titre:"Zagreb (arrivée)", date:"Mer 29 juillet 2026", flag:"🇭🇷", hotel:"Hôtel Laguna", items:[
-    {h:"08:25",t:"train", d:"🚂 Départ Ljubljana"},
-    {h:"11:00",t:"info",  d:"📍 Arrivée Zagreb Glavni kolodvor"},
-    {h:"11:10",t:"visit", d:"🌳 Parc Zrinjevac (bandstand et fontaine)"},
-    {h:"12:00",t:"visit", d:"🏛️ Place Ban Jelačić (cœur de Zagreb)"},
-    {h:"12:45",t:"food",  d:"🍽️ Déjeuner rue Tkalčićeva (restaurants & bars en terrasse)"},
-    {h:"14:00",t:"visit", d:"⛪ Cathédrale de Zagreb (néo-gothique, plus haute de Croatie)"},
-    {h:"14:45",t:"visit", d:"🛍️ Marché Dolac (marché paysan coloré, chapeaux rouges)"},
-    {h:"15:30",t:"visit", d:"🏘️ Haute Ville – Gornji Grad (quartier médiéval)"},
-    {h:"16:00",t:"visit", d:"⛪ Église Saint-Marc (toit en tuiles aux armoiries de Zagreb)"},
-    {h:"17:00",t:"hotel", d:"🏨 Check-in Hôtel Laguna"},
-    {h:"19:00",t:"food",  d:"🍽️ Dîner et balade"},
-    {h:"21:30",t:"hotel", d:"🏨 Retour hôtel"},
-  ]},
-  {jour:19, titre:"Zagreb", date:"Jeu 30 juillet 2026", flag:"🇭🇷", hotel:"Hôtel Laguna", items:[
-    {h:"09:00",t:"info",  d:"🚶 Départ Hôtel Laguna"},
-    {h:"09:30",t:"visit", d:"⚰️ Cimetière Mirogoj (nécropole monumentale – chef-d'œuvre architectural)"},
-    {h:"11:00",t:"visit", d:"🌳 Parc Maksimir (premier parc public de Croatie, 1794)"},
-    {h:"11:45",t:"visit", d:"🦁 Zoo de Zagreb (extérieur)"},
-    {h:"12:45",t:"food",  d:"🍽️ Déjeuner secteur Maksimir"},
-    {h:"14:15",t:"visit", d:"🛣️ Avenue Ilica (plus longue rue de Zagreb – shopping)"},
-    {h:"15:30",t:"visit", d:"🏛️ Museum of Broken Relationships (musée des relations brisées – unique au monde)"},
-    {h:"16:15",t:"visit", d:"🚡 Funiculaire de Zagreb (le plus court du monde – 66 m)"},
-    {h:"17:00",t:"visit", d:"🛣️ Tkalčićeva – terrasses & ambiance"},
-    {h:"19:00",t:"food",  d:"🍽️ Dîner dans le centre"},
-    {h:"21:00",t:"hotel", d:"🏨 Retour hôtel"},
-  ]},
-  {jour:20, titre:"Retour en France", date:"Ven 31 juillet 2026", flag:"🇭🇷✈️🇫🇷", hotel:"—", items:[
-    {h:"09:00",t:"hotel", d:"✔️ Check-out Hôtel Laguna"},
-    {h:"09:15",t:"info",  d:"🚕 Taxi recommandé vers l'aéroport de Zagreb"},
-    {h:"10:00",t:"info",  d:"🛄 Enregistrement & dépôt bagages"},
-    {h:"11:30",t:"info",  d:"🔒 Contrôles de sécurité"},
-    {h:"12:20",t:"avion", d:"✈️ Décollage Zagreb ZAG → Beauvais BVA"},
-    {h:"14:20",t:"avion", d:"✈️ Atterrissage Aéroport de Beauvais-Tillé"},
-    {h:"~15:30",t:"train", d:"🚌 Navette Beauvais → Paris Porte Maillot (~1h15)"},
-    {h:"~21:00",t:"train", d:"🚂 Train Paris → Brest (nuit)"},
-  ]},
+const DAYS_META = [
+  {jour:1,  label:'Bruxelles',             fullDate:'Dim 12 juillet 2026', flag:'🇧🇪', matchDate:'12/07', city:'Bruxelles'},
+  {jour:2,  label:'Bruxelles',             fullDate:'Lun 13 juillet 2026', flag:'🇧🇪', matchDate:'13/07', city:'Bruxelles'},
+  {jour:3,  label:'Luxembourg',            fullDate:'Mar 14 juillet 2026', flag:'🇱🇺', matchDate:'14/07', city:'Luxembourg'},
+  {jour:4,  label:'Berlin – arrivée',      fullDate:'Mer 15 juillet 2026', flag:'🇩🇪', matchDate:'15/07', city:'Berlin'},
+  {jour:5,  label:'Berlin',               fullDate:'Jeu 16 juillet 2026', flag:'🇩🇪', matchDate:'16/07', city:'Berlin'},
+  {jour:6,  label:'Varsovie – arrivée',   fullDate:'Ven 17 juillet 2026', flag:'🇵🇱', matchDate:'17/07', city:'Varsovie'},
+  {jour:7,  label:'Varsovie',             fullDate:'Sam 18 juillet 2026', flag:'🇵🇱', matchDate:'18/07', city:'Varsovie'},
+  {jour:8,  label:'Cracovie – arrivée',   fullDate:'Dim 19 juillet 2026', flag:'🇵🇱', matchDate:'19/07', city:'Cracovie'},
+  {jour:9,  label:'Auschwitz (excursion)',  fullDate:'Lun 20 juillet 2026', flag:'🇵🇱', matchDate:'20/07', city:'Cracovie'},
+  {jour:10, label:'Vienne – arrivée',     fullDate:'Mar 21 juillet 2026', flag:'🇦🇹', matchDate:'21/07', city:'Vienne'},
+  {jour:11, label:'Vienne',              fullDate:'Mer 22 juillet 2026', flag:'🇦🇹', matchDate:'22/07', city:'Vienne'},
+  {jour:12, label:'Bratislava – arrivée', fullDate:'Jeu 23 juillet 2026', flag:'🇸🇰', matchDate:'23/07', city:'Bratislava'},
+  {jour:13, label:'Bratislava',          fullDate:'Ven 24 juillet 2026', flag:'🇸🇰', matchDate:'24/07', city:'Bratislava'},
+  {jour:14, label:'Budapest – arrivée',  fullDate:'Sam 25 juillet 2026', flag:'🇭🇺', matchDate:'25/07', city:'Budapest'},
+  {jour:15, label:'Budapest',           fullDate:'Dim 26 juillet 2026', flag:'🇭🇺', matchDate:'26/07', city:'Budapest'},
+  {jour:16, label:'Ljubljana – arrivée', fullDate:'Lun 27 juillet 2026', flag:'🇸🇮', matchDate:'27/07', city:'Ljubljana'},
+  {jour:17, label:'Ljubljana',          fullDate:'Mar 28 juillet 2026', flag:'🇸🇮', matchDate:'28/07', city:'Ljubljana'},
+  {jour:18, label:'Zagreb – arrivée',   fullDate:'Mer 29 juillet 2026', flag:'🇭🇷', matchDate:'29/07', city:'Zagreb'},
+  {jour:19, label:'Zagreb',            fullDate:'Jeu 30 juillet 2026', flag:'🇭🇷', matchDate:'30/07', city:'Zagreb'},
+  {jour:20, label:'Retour en France',  fullDate:'Ven 31 juillet 2026', flag:'🇭🇷✈️🇫🇷', matchDate:'31/07', city:'Zagreb'},
 ];
 
-const iconType = {train:'🚂',avion:'✈️',hotel:'🏨',visit:'📍',food:'🍽️',info:'ℹ️'};
-
+const T_ICON  = {Train:'🚂', FlixBus:'🟢', Avion:'✈️', Bus:'🚌', Voiture:'🚗', '-':'—'};
+const TAG_ICON = {must:'⭐', opt:'👍', food:'🍽️', free:'🆓'};
 let openDays = {};
+
+/* syncProgramme : appelé après chaque modif pour garder Jours en phase */
+function syncProgramme() {
+  const sec = document.getElementById('sec-programme');
+  if(sec && sec.classList.contains('active')) renderProgramme();
+}
 
 function renderProgramme() {
   const c = document.getElementById('programme-list');
-  c.innerHTML = PROGRAMME.map((d,i) => `
-    <div class="prog-card">
-      <div class="prog-header" onclick="toggleDay(${i})">
-        <span class="prog-jour">J${d.jour}</span>
-        <span class="prog-flag">${d.flag}</span>
-        <span class="prog-titre">${d.titre}</span>
-        <span class="prog-date">${d.date.split(' ').slice(1).join(' ')}</span>
-        <span class="prog-arrow" id="arr-${i}">${openDays[i]?'▾':'▸'}</span>
+  if(!c) return;
+  c.innerHTML = DAYS_META.map(day => {
+    const open = openDays[day.jour] !== false; // ouvert par défaut
+
+    // ── Lignes itinéraire du jour ──────────────────────
+    const rows     = state.itinerary.filter(r => r.date === day.matchDate);
+    const trajets  = rows.filter(r => r.type === 'trajet');
+    const sejours  = rows.filter(r => r.type === 'sejour');
+
+    // ── Hôtel de la ville ──────────────────────────────
+    const hotel = state.hotels.find(h => h.ville === day.city);
+
+    // ── Visites prévues (aperçu) ───────────────────────
+    const cityVis = (state.visites || []).find(v => v.ville === day.city);
+    const mustVis = cityVis ? cityVis.items.filter(v => !v.done) : [];
+
+    // ── Construction du contenu ────────────────────────
+    let html = '';
+
+    // Transports
+    if(trajets.length) {
+      html += '<div class="prog-section-lbl">🚦 Transports</div>';
+      trajets.forEach(r => {
+        const ico = T_ICON[r.transport] || '🚗';
+        const transColor = {Train:'#1565c0',FlixBus:'#1b5e20',Avion:'#e65100',Bus:'#6a1b9a',Voiture:'#880e4f'}[r.transport]||'#555';
+        html += `<div class="prog-item" style="background:#f8f9ff;border-radius:7px;margin-bottom:4px;padding:6px 8px">
+          <span class="prog-time" style="color:${transColor};font-size:1rem">${ico}</span>
+          <span class="prog-desc"><strong style="color:#1a1a2e">${r.nom}</strong><br>
+            <span style="color:var(--gray);font-size:0.7rem">
+              ${r.depart && r.depart!=='-' ? r.depart+' → '+r.arrivee+' &nbsp;·&nbsp; ' : ''}${r.notes}
+              ${r.montant ? ' &nbsp;·&nbsp; <strong style=\'color:var(--gold)\'>'+r.montant+' €</strong>' : ''}
+            </span>
+          </span>
+        </div>`;
+      });
+    }
+
+    // Activités / séjours
+    const actSejours = sejours.filter(r => !/(hébergement|hôtel)/i.test(r.nom));
+    if(actSejours.length) {
+      html += '<div class="prog-section-lbl" style="margin-top:8px">📌 Programme</div>';
+      actSejours.forEach(r => {
+        html += `<div class="prog-item">
+          <span class="prog-time">📌</span>
+          <span class="prog-desc type-visit"><strong>${r.nom}</strong>
+          ${r.notes ? '<br><span style="color:var(--gray);font-size:0.7rem">'+r.notes+'</span>' : ''}
+          </span>
+        </div>`;
+      });
+    }
+
+    // Hôtel de nuit
+    if(hotel && hotel.nom && hotel.nom !== 'À définir') {
+      html += `<div class="prog-hotel-tag" style="margin-top:10px;flex-direction:column;align-items:flex-start;gap:2px">
+        <div><strong>🏨 ${hotel.nom}</strong>${hotel.notes ? ' <span style="font-size:0.65rem;color:var(--gray);font-style:italic">· '+hotel.notes+'</span>' : ''}</div>
+        ${hotel.adresse ? '<div style="font-size:0.65rem;color:var(--gray)">📍 '+hotel.adresse+'</div>' : ''}
+        ${hotel.phone   ? '<div style="font-size:0.65rem;color:var(--gray)">📞 '+hotel.phone+'</div>' : ''}
+      </div>`;
+    }
+
+    // Aperçu visites
+    if(mustVis.length) {
+      html += `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #f0ece4">
+        <div class="prog-section-lbl">À voir (${mustVis.length} lieu${mustVis.length>1?'x':''})</div>`;
+      mustVis.slice(0,4).forEach(v => {
+        html += `<div class="prog-item" style="padding:3px 0">
+          <span class="prog-time" style="font-size:.85rem">${TAG_ICON[v.tag]||'📍'}</span>
+          <span class="prog-desc" style="font-size:0.76rem">${v.nom}</span>
+        </div>`;
+      });
+      if(mustVis.length > 4) html += `<div style="font-size:0.65rem;color:var(--gold);padding:2px 0 0 24px">+${mustVis.length-4} autres dans l2019onglet 🏛️ Visites</div>`;
+      html += '</div>';
+    }
+
+    if(!html) html = '<div style="font-size:0.75rem;color:var(--gray);padding:6px 0">Aucune étape pour ce jour — ajoutez-en dans l2019onglet Itinéraire.</div>';
+
+    return `<div class="prog-card">
+      <div class="prog-header" onclick="toggleDay(${day.jour})">
+        <span class="prog-jour">J${day.jour}</span>
+        <span class="prog-flag">${day.flag}</span>
+        <span class="prog-titre">${day.label}</span>
+        <span class="prog-date">${day.fullDate}</span>
+        <span class="prog-arrow" id="arr-${day.jour}">${open ? '▾' : '▸'}</span>
       </div>
-      <div class="prog-body" id="body-${i}" style="display:${openDays[i]?'block':'none'}">
-        ${d.items.map(item=>`
-          <div class="prog-item">
-            <span class="prog-time">${item.h}</span>
-            <span class="prog-icon">${iconType[item.t]||'📌'}</span>
-            <span class="prog-desc type-${item.t}">${item.d}</span>
-          </div>
-        `).join('')}
-        ${d.hotel && d.hotel!=='—' ? `<div class="prog-hotel-tag">🏨 ${d.hotel}</div>` : ''}
-      </div>
-    </div>
-  `).join('');
+      <div class="prog-body" id="body-${day.jour}" style="display:${open ? 'block' : 'none'}">${html}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDay(jour) {
+  openDays[jour] = (openDays[jour] === false) ? true : false;
+  const body = document.getElementById('body-'+jour);
+  const arr  = document.getElementById('arr-'+jour);
+  if(body) body.style.display = (openDays[jour] !== false) ? 'block' : 'none';
+  if(arr)  arr.textContent    = (openDays[jour] !== false) ? '▾' : '▸';
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1362,13 +1233,13 @@ function toggleVCity(cityId) {
 function toggleVisiteDone(cityId, itemId) {
   const city = state.visites.find(c=>c.id===cityId);
   const item = city && city.items.find(i=>i.id===itemId);
-  if(item){ item.done = !item.done; save(); renderVisites(); }
+  if(item){ item.done = !item.done; save(); renderVisites(); syncProgramme(); }
 }
 
 function editVisiteField(cityId, itemId, field, el) {
   const city = state.visites.find(c=>c.id===cityId);
   const item = city && city.items.find(i=>i.id===itemId);
-  if(item){ item[field] = el.textContent.trim(); save(); }
+  if(item){ item[field] = el.textContent.trim(); save(); syncProgramme(); }
 }
 
 const TAG_ORDER = ['must','opt','food','free'];

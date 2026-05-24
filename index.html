@@ -175,6 +175,59 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
 .type-visit{color:#333;}
 .type-food{color:#7b3f00;}
 .type-info{color:var(--gray);}
+/* ── VISITES PAR VILLE ───────────────────────────────── */
+.vcard{background:white;border-radius:var(--radius);margin-bottom:12px;box-shadow:var(--shadow);overflow:hidden;}
+.vcard-header{display:flex;align-items:center;gap:10px;padding:13px 14px;background:linear-gradient(135deg,var(--navy),var(--navy2));cursor:pointer;user-select:none;-webkit-user-select:none;}
+.vcard-header:active{opacity:.85;}
+.vcard-flag{font-size:1.3rem;flex-shrink:0;}
+.vcard-info{flex:1;}
+.vcard-city{font-family:Georgia,serif;font-weight:bold;font-size:1rem;color:var(--gold);}
+.vcard-dates{font-size:0.62rem;color:rgba(255,255,255,0.5);margin-top:1px;}
+.vcard-count{background:var(--gold);color:var(--navy);font-size:0.62rem;font-weight:800;padding:2px 7px;border-radius:10px;flex-shrink:0;}
+.vcard-arrow{color:var(--gold);font-size:0.9rem;flex-shrink:0;transition:transform .2s;}
+.vcard-body{padding:10px 14px 14px;}
+
+.vitem{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:9px;margin-bottom:6px;background:var(--light);position:relative;transition:background .15s;}
+.vitem:last-child{margin-bottom:0;}
+.vitem-drag{color:#ccc;font-size:14px;cursor:grab;flex-shrink:0;padding-top:2px;touch-action:none;}
+.vitem-drag:active{cursor:grabbing;}
+.vitem-icon{font-size:1.1rem;flex-shrink:0;padding-top:1px;}
+.vitem-body{flex:1;min-width:0;}
+.vitem-nom{font-size:0.82rem;font-weight:600;color:var(--navy);outline:none;word-break:break-word;}
+.vitem-nom:focus{background:#fff9e0;border-radius:4px;padding:0 2px;}
+.vitem-desc{font-size:0.72rem;color:var(--gray);margin-top:3px;outline:none;word-break:break-word;line-height:1.4;}
+.vitem-desc:focus{background:#fff9e0;border-radius:4px;padding:0 2px;}
+.vitem-desc:empty::before{content:'Ajouter une note…';color:#bbb;}
+.vitem-meta{display:flex;align-items:center;gap:6px;margin-top:5px;}
+.vtag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:0.6rem;font-weight:700;text-transform:uppercase;}
+.vtag.must{background:#fde8e8;color:#c0392b;}
+.vtag.opt{background:#e8f4fd;color:#2166ac;}
+.vtag.food{background:#fef9e0;color:#9a6f00;}
+.vtag.free{background:#e8faf0;color:#1e7e4f;}
+.vitem-del{background:none;border:none;color:#ddd;font-size:13px;cursor:pointer;padding:2px 3px;flex-shrink:0;}
+.vitem-del:active{color:var(--red);}
+.vitem.done-v .vitem-nom{text-decoration:line-through;color:var(--gray);}
+.vitem.done-v{opacity:.55;}
+.vcheck{width:18px;height:18px;border-radius:50%;border:2px solid #ccc;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;color:white;transition:all .2s;margin-top:2px;}
+.vcheck.checked{background:var(--green);border-color:var(--green);}
+
+.vadd-btn{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:8px;border:2px dashed #d0ccc0;border-radius:9px;background:none;color:var(--gold);font-size:0.78rem;font-weight:600;cursor:pointer;margin-top:8px;transition:all .15s;}
+.vadd-btn:active{background:var(--light);}
+
+.vadd-form{background:#fffbe6;border-radius:9px;padding:10px;margin-top:8px;border:2px dashed var(--gold);display:none;}
+.vadd-form.open{display:block;}
+.vadd-form input,.vadd-form select,.vadd-form textarea{display:block;width:100%;padding:7px 9px;border:1px solid #ddd;border-radius:7px;font-size:0.78rem;margin-bottom:6px;background:white;font-family:-apple-system,sans-serif;}
+.vadd-form textarea{resize:vertical;min-height:50px;}
+.vadd-form input:focus,.vadd-form select:focus,.vadd-form textarea:focus{outline:none;border-color:var(--gold);}
+.vtag-select{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.vtag-opt{padding:4px 10px;border-radius:10px;font-size:0.68rem;font-weight:700;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.vtag-opt.must{background:#fde8e8;color:#c0392b;}
+.vtag-opt.opt{background:#e8f4fd;color:#2166ac;}
+.vtag-opt.food{background:#fef9e0;color:#9a6f00;}
+.vtag-opt.free{background:#e8faf0;color:#1e7e4f;}
+.vtag-opt.sel{border-color:currentColor;box-shadow:0 0 0 1px currentColor;}
+.vcard-prog{height:4px;background:#f0ece4;margin:0 14px 10px;border-radius:2px;overflow:hidden;}
+.vcard-prog-fill{height:100%;background:var(--green);border-radius:2px;transition:width .3s;}
 </style>
 </head>
 <body>
@@ -189,6 +242,7 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
     <div class="tab" onclick="showTab('budget',this)">💰 Budget</div>
     <div class="tab" onclick="showTab('checklist',this)">✅ Checklist</div>
     <div class="tab" onclick="showTab('programme',this)">📅 Jours</div>
+    <div class="tab" onclick="showTab('visites',this)">🏛️ Visites</div>
   </div>
 </div>
 
@@ -275,6 +329,12 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
   <div class="section" id="sec-programme">
     <div class="section-title">📅 Programme jour par jour</div>
     <div id="programme-list"></div>
+  </div>
+
+  <!-- ═══ VISITES PAR VILLE ═══════════════════════════ -->
+  <div class="section" id="sec-visites">
+    <div class="section-title">🏛️ Visites par ville</div>
+    <div id="visites-list"></div>
   </div>
 
   <!-- ═══ CHECKLIST ════════════════════════════════════ -->
@@ -453,6 +513,7 @@ function showTab(id, el) {
   if(id==='budget') renderBudget();
   if(id==='checklist') renderChecklist();
   if(id==='programme') renderProgramme();
+  if(id==='visites') renderVisites();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1083,6 +1144,273 @@ function renderProgramme() {
   `).join('');
 }
 
+/* ══════════════════════════════════════════════════════════
+   VISITES PAR VILLE
+══════════════════════════════════════════════════════════ */
+const DEFAULT_VISITES = [
+  { id:'v-bxl', ville:'Bruxelles', flag:'🇧🇪', dates:'12–14 juillet', open:false,
+    items:[
+      {id:'bxl1', nom:'Grand-Place', desc:'Plus belle place du monde selon Victor Hugo. Hôtel de Ville gothique, Maison du Roi. Très animée le soir.', tag:'must', done:false},
+      {id:'bxl2', nom:'Manneken Pis', desc:'Statue emblématique à 2 min de la Grand-Place. Souvent déguisé !', tag:'must', done:false},
+      {id:'bxl3', nom:'Galeries Royales Saint-Hubert', desc:'Galerie marchande couverte de 1847 – chocolatiers, librairies, cafés raffinés.', tag:'opt', done:false},
+      {id:'bxl4', nom:'Atomium', desc:'Monument iconique de l'Expo 58. Sphères géantes avec vue panoramique. ~15€ entrée.', tag:'opt', done:false},
+      {id:'bxl5', nom:'Quartier Sablon', desc:'Antiquités, chocolatiers Neuhaus & Wittamer, marché du week-end.', tag:'opt', done:false},
+      {id:'bxl6', nom:'Moules-frites / gaufres', desc:'Incontournable ! Restaurant recommandé : Chez Léon près de la Grand-Place.', tag:'food', done:false},
+    ]
+  },
+  { id:'v-lux', ville:'Luxembourg', flag:'🇱🇺', dates:'14–15 juillet', open:false,
+    items:[
+      {id:'lux1', nom:'Pont Adolphe', desc:'Pont néo-gothique de 1903 enjambant le Pétrusse. Vue imprenable depuis la Place de la Constitution.', tag:'must', done:false},
+      {id:'lux2', nom:'Cathédrale Notre-Dame', desc:'Style gothique Renaissance (XVIIe s). Crypte des Grands-Ducs. Entrée libre.', tag:'must', done:false},
+      {id:'lux3', nom:'Chemin de la Corniche', desc:'«Plus belle ballade d'Europe» – promenade sur les fortifications avec vue sur le Grund.', tag:'must', done:false},
+      {id:'lux4', nom:'Casemates du Bock', desc:'23 km de souterrains fortifiés creusés dans le rocher. ~8€. UNESCO.', tag:'must', done:false},
+      {id:'lux5', nom:'Quartier du Grund', desc:'Vieille ville au bord de l'Alzette, ruelles pavées, terrasses de cafés.', tag:'must', done:false},
+      {id:'lux6', nom:'Ascenseur Pfaffenthal', desc:'Funiculaire moderne et gratuit reliant la ville haute et basse. Vue spectaculaire.', tag:'opt', done:false},
+      {id:'lux7', nom:'Parc Kinnekswiss', desc:'Parc tranquille au cœur de la ville, idéal pour une pause.', tag:'free', done:false},
+      {id:'lux8', nom:'Plateau de Kirchberg', desc:'Quartier européen – Parlement Européen, CJUE, philharmonie moderne.', tag:'opt', done:false},
+    ]
+  },
+  { id:'v-ber', ville:'Berlin', flag:'🇩🇪', dates:'15–17 juillet', open:false,
+    items:[
+      {id:'ber1', nom:'Porte de Brandebourg', desc:'Symbole de la réunification allemande. À voir de jour et de nuit éclairée. Pariser Platz.', tag:'must', done:false},
+      {id:'ber2', nom:'Reichstag – coupole en verre', desc:'Coupole panoramique gratuite (réservation obligatoire sur bundestag.de). Vue 360° sur Berlin.', tag:'must', done:false},
+      {id:'ber3', nom:'Mémorial de l'Holocauste', desc:'2711 stèles de béton – très émouvant. Entrée gratuite. Sous-sol payant (~5€).', tag:'must', done:false},
+      {id:'ber4', nom:'East Side Gallery', desc:'1,3 km du Mur de Berlin couverts de fresques d'artistes du monde entier. Gratuit.', tag:'must', done:false},
+      {id:'ber5', nom:'Checkpoint Charlie', desc:'Ancien poste de contrôle allié. Musée sur place (~15€). Photo avec soldats en uniforme.', tag:'must', done:false},
+      {id:'ber6', nom:'Unter den Linden', desc:'Grande avenue depuis la Porte de Brandebourg jusqu'à l'île aux Musées.', tag:'must', done:false},
+      {id:'ber7', nom:'Cathédrale de Berlin (Berliner Dom)', desc:'Dôme imposant sur l'île aux Musées. Montée possible (~7€). Panorama sur la ville.', tag:'opt', done:false},
+      {id:'ber8', nom:'Alexanderplatz & Tour de télévision', desc:'Place centrale de l'ex-Berlin-Est. Tour TV (Fernsehturm) à 368 m – restaurant rotatif au sommet.', tag:'must', done:false},
+      {id:'ber9', nom:'Potsdamer Platz', desc:'Cœur de la reconstruction berlinoise post-chute du Mur. Architecture moderne spectaculaire.', tag:'opt', done:false},
+      {id:'ber10',nom:'Tiergarten', desc:'Grand parc central (200 ha). Idéal pour une pause entre deux visites.', tag:'free', done:false},
+      {id:'ber11',nom:'Siegessäule – Colonne de la Victoire', desc:'Montée possible (~3€). Vue sur l'axe est-ouest de Berlin depuis 67 m.', tag:'opt', done:false},
+      {id:'ber12',nom:'Mauerpark', desc:'Ancien "no man's land" devenu parc et marché aux puces le dimanche. Karaoké en plein air !', tag:'opt', done:false},
+      {id:'ber13',nom:'Oberbaumbrücke', desc:'Pont gothique rouge sur la Spree reliant Kreuzberg et Friedrichshain. Très photogénique.', tag:'opt', done:false},
+      {id:'ber14',nom:'Currywurst & Döner', desc:'Spécialités berlinoises. Currywurst au Curry 36 (Kreuzberg) ou Konnopke. Döner au Mustafa's.', tag:'food', done:false},
+    ]
+  },
+  { id:'v-var', ville:'Varsovie', flag:'🇵🇱', dates:'17–19 juillet', open:false,
+    items:[
+      {id:'var1', nom:'Vieille Ville – Rynek Starego Miasta', desc:'Entièrement reconstruite après WWII. UNESCO. Place du marché colorée avec ses maisons baroques.', tag:'must', done:false},
+      {id:'var2', nom:'Château Royal de Varsovie', desc:'Résidence des rois de Pologne. Collections d'art remarquables. ~20 zł entrée.', tag:'must', done:false},
+      {id:'var3', nom:'Palais de la Culture et de la Science', desc:'Gratte-ciel stalinien de 237 m. Terrasse panoramique au 30e étage (~20 zł). Très emblématique.', tag:'must', done:false},
+      {id:'var4', nom:'Nowy Świat & Krakowskie Przedmieście', desc:'Rue principale piétonne commerçante et historique, cafés et restaurants élégants.', tag:'must', done:false},
+      {id:'var5', nom:'Parc Łazienki Królewskie', desc:'Plus beau parc de Varsovie. Palais sur l'Eau, Belweder, paons en liberté. Gratuit.', tag:'must', done:false},
+      {id:'var6', nom:'Musée de l'Insurrection de Varsovie', desc:'Musée interactif et émouvant sur la résistance 1944. Prévoir 2-3h. ~25 zł.', tag:'must', done:false},
+      {id:'var7', nom:'Stade National PGE Narodowy', desc:'Le stade du foot polonais vu de l'extérieur et depuis la Vistule. Architecture originale.', tag:'opt', done:false},
+      {id:'var8', nom:'Quartier Praga', desc:'Quartier alternatif de l'Est : street art, galeries, hipster bars. Très authentique.', tag:'opt', done:false},
+      {id:'var9', nom:'Pierogi & Żurek', desc:'Spécialités polonaises. Restaurant : Bar Mleczny (snack-bar traditionnel très bon marché).', tag:'food', done:false},
+    ]
+  },
+  { id:'v-kra', ville:'Cracovie', flag:'🇵🇱', dates:'19–21 juillet', open:false,
+    items:[
+      {id:'kra1', nom:'Rynek Główny – Place du Marché', desc:'Plus grande place médiévale d'Europe. Halle aux draps (Sukiennice), statue de Mickiewicz. UNESCO.', tag:'must', done:false},
+      {id:'kra2', nom:'Basilique Sainte-Marie', desc:'Trompette jouée toutes les heures depuis la tour (hejnał). Autel de Wit Stwosz exceptionnel.', tag:'must', done:false},
+      {id:'kra3', nom:'Château du Wawel', desc:'Résidence royale sur une colline. Cathédrale, appartements royaux, trésor. ~25 zł sections.', tag:'must', done:false},
+      {id:'kra4', nom:'Grotte du Dragon du Wawel', desc:'Légende du dragon de Cracovie. Statue crachant du feu au bord de la Vistule. Entrée ~4 zł.', tag:'must', done:false},
+      {id:'kra5', nom:'Quartier Kazimierz', desc:'Ancien quartier juif. Synagogues, galeries, bars branchés, marché Plac Nowy. Incontournable.', tag:'must', done:false},
+      {id:'kra6', nom:'Excursion Auschwitz-Birkenau', desc:'J9 – Départ 08h06. Transport + visite guidée ~3h. Lieu de recueillement. Eau et snacks à prévoir.', tag:'must', done:false},
+      {id:'kra7', nom:'Balade le long de la Vistule', desc:'Planty (ceinture verte autour de la vieille ville) ou berges de la Vistule au coucher de soleil.', tag:'free', done:false},
+      {id:'kra8', nom:'Oscypek & Pierogi Ruskie', desc:'Fromage fumé des Tatras et raviolis polonais. Meilleurs près du marché Rynek.', tag:'food', done:false},
+    ]
+  },
+  { id:'v-vie', ville:'Vienne', flag:'🇦🇹', dates:'21–23 juillet', open:false,
+    items:[
+      {id:'vie1', nom:'Château de Schönbrunn', desc:'Résidence impériale des Habsbourg. Gloriette avec vue 360°. ~14-20€ selon formule. UNESCO.', tag:'must', done:false},
+      {id:'vie2', nom:'Stephansdom', desc:'Cathédrale gothique emblématique au cœur de Vienne. Montée tour nord ~5€. Gratuit à l'intérieur.', tag:'must', done:false},
+      {id:'vie3', nom:'Opéra de Vienne (Wiener Staatsoper)', desc:'Visite guidée possible (~9€). L'un des plus beaux opéras du monde. À voir de l'extérieur le soir.', tag:'must', done:false},
+      {id:'vie4', nom:'Belvedere', desc:'Palais baroque avec jardins. Musée Klimt (Le Baiser). Extérieurs gratuits, intérieur ~15€.', tag:'must', done:false},
+      {id:'vie5', nom:'MuseumsQuartier', desc:'2e complexe muséal du monde (Mumok, Kunsthalle, Léopold…). Quartier très animé le soir.', tag:'opt', done:false},
+      {id:'vie6', nom:'Naschmarkt', desc:'Grand marché viennois ouvert le matin. Olives, fromages, épices, saucisses. Idéal pour le déjeuner.', tag:'must', done:false},
+      {id:'vie7', nom:'Karlskirche – Karlsplatz', desc:'Église baroque de 1737. Ascenseur panoramique à l'intérieur jusqu'aux fresques (~10€).', tag:'opt', done:false},
+      {id:'vie8', nom:'Rathaus & Ringstrasse', desc:'Boulevard impérial avec Parlement, Burgtheater, Hôtel de Ville néo-gothique. Balade gratuite.', tag:'opt', done:false},
+      {id:'vie9', nom:'Stadtpark & Statue de Strauss', desc:'Parc central avec la célèbre statue dorée de Johann Strauss. Très photogénique. Gratuit.', tag:'free', done:false},
+      {id:'vie10',nom:'Apfelstrudel & Wiener Schnitzel', desc:'Incontournables ! Café Schwarzenberg ou Café Central pour un vrai Kaffee viennois.', tag:'food', done:false},
+    ]
+  },
+  { id:'v-bra', ville:'Bratislava', flag:'🇸🇰', dates:'23–25 juillet', open:false,
+    items:[
+      {id:'bra1', nom:'Château de Bratislava', desc:'Vue imprenable sur le Danube et l'Autriche. Musée de la Slovaquie à l'intérieur. ~8€.', tag:'must', done:false},
+      {id:'bra2', nom:'Vieille Ville – Staré Mesto', desc:'Entièrement piétonne. Place principale (Hlavné nám.), Hôtel de Ville, fontaines. Très agréable.', tag:'must', done:false},
+      {id:'bra3', nom:'Pont UFO – Most SNP', desc:'Pont suspendu des années 70 avec restaurant panoramique à 85 m. Montée ~7€ (déduite de la conso).', tag:'must', done:false},
+      {id:'bra4', nom:'Cathédrale Saint-Martin', desc:'Cathédrale gothique du XIVe s. où furent couronnés les rois de Hongrie. Entrée libre.', tag:'must', done:false},
+      {id:'bra5', nom:'Slavín Memorial', desc:'Cimetière militaire soviétique sur une colline avec panorama sur toute la ville. Gratuit.', tag:'opt', done:false},
+      {id:'bra6', nom:'Château de Devín', desc:'Ruines médiévales à la confluence du Danube et de la Morava. Bus 29 depuis le centre. ~5€.', tag:'must', done:false},
+      {id:'bra7', nom:'Eurovea Riverside', desc:'Promenade le long du Danube avec terrasses et vue sur l'Autriche. Gratuit.', tag:'free', done:false},
+      {id:'bra8', nom:'Bryndzové halušky & Kapustnica', desc:'Plats slovaques typiques. Dîner recommandé : Koliba Bratislava ou Slovak Pub.', tag:'food', done:false},
+    ]
+  },
+  { id:'v-bud', ville:'Budapest', flag:'🇭🇺', dates:'25–27 juillet', open:false,
+    items:[
+      {id:'bud1', nom:'Parlement de Budapest', desc:'3e plus grand parlement du monde (néo-gothique). Visite guidée ~8 000 HUF. Extérieur sublime.', tag:'must', done:false},
+      {id:'bud2', nom:'Pont des Chaînes (Széchenyi lánchíd)', desc:'Symbole de Budapest reliant Buda et Pest. À voir de nuit illuminé. Balade gratuite.', tag:'must', done:false},
+      {id:'bud3', nom:'Basilique Saint-Étienne', desc:'Relique de la main de saint Étienne. Tour panoramique ~500 HUF. Entrée libre.', tag:'must', done:false},
+      {id:'bud4', nom:'Place des Héros – Hősök tere', desc:'Place monumentale classée UNESCO avec les 7 chefs magyars. Musée des Beaux-Arts face à face.', tag:'must', done:false},
+      {id:'bud5', nom:'Château Vajdahunyad & Városliget', desc:'Château médiéval dans le parc de la ville. Lac, patinoire en hiver. Gratuit.', tag:'must', done:false},
+      {id:'bud6', nom:'Île Marguerite – Margitsziget', desc:'Île de 2,5 km dans le Danube : jardins, fontaine musicale, ruines médiévales. Gratuit.', tag:'must', done:false},
+      {id:'bud7', nom:'New York Café', desc:'«Plus beau café du monde». Décor extravagant Belle Époque. Café ~5€. À voir absolument.', tag:'must', done:false},
+      {id:'bud8', nom:'Avenue Andrássy', desc:'«Champs-Élysées hongrois» classé UNESCO. Boutiques, opéra, ambassades.', tag:'opt', done:false},
+      {id:'bud9', nom:'Liberty Bridge & Gellért', desc:'Pont vert Art Nouveau. Colline Gellért derrière avec citadelle et vue panoramique.', tag:'opt', done:false},
+      {id:'bud10',nom:'Bains thermaux Széchenyi', desc:'Les plus grands de Budapest. ~22€. Piscines intérieure/extérieure. Réserver en avance.', tag:'opt', done:false},
+      {id:'bud11',nom:'Goulash & Lángos', desc:'Goulash au restaurant Gerbeaud ou Borkonyha. Lángos (beignet frit) dans les marchés.', tag:'food', done:false},
+    ]
+  },
+  { id:'v-lju', ville:'Ljubljana', flag:'🇸🇮', dates:'27–29 juillet', open:false,
+    items:[
+      {id:'lju1', nom:'Château de Ljubljana', desc:'Funiculaire ou montée à pied (15 min). Panorama sur la ville et les Alpes. ~10€ funiculaire.', tag:'must', done:false},
+      {id:'lju2', nom:'Triple Bridge – Tromostovje', desc:'Trois ponts Art Nouveau enjambant la Ljubljanica. Cœur de la vieille ville.', tag:'must', done:false},
+      {id:'lju3', nom:'Pont du Dragon', desc:'4 dragons en bronze gardant le pont – symbole de la ville. Très photogénique.', tag:'must', done:false},
+      {id:'lju4', nom:'Place Prešeren', desc:'Place centrale avec la statue du poète et la Franziskanerkirche rose. Animation en soirée.', tag:'must', done:false},
+      {id:'lju5', nom:'Parc Tivoli', desc:'Grand parc verdoyant avec allées, fontaines et musée Tivoli. Gratuit.', tag:'free', done:false},
+      {id:'lju6', nom:'Nebotičnik Tower', desc:'Gratte-ciel art déco de 1933. Bar panoramique au 12e étage avec vue sur les Alpes.', tag:'opt', done:false},
+      {id:'lju7', nom:'Metelkova Art District', desc:'Ancienne caserne militaire reconvertie en espace culturel alternatif. Graffitis, galeries, bars.', tag:'opt', done:false},
+      {id:'lju8', nom:'Marché Central (Plečnik)', desc:'Marché couvert et en plein air le long de la Ljubljanica. Fruits, fromages, fleurs. Matin seulement.', tag:'must', done:false},
+      {id:'lju9', nom:'Promenade le long de la Ljubljanica', desc:'Berges piétonnes animées de cafés et restaurants en terrasse. Gratuit.', tag:'free', done:false},
+      {id:'lju10',nom:'Kranjska klobasa & Potica', desc:'Saucisse de Carniole grillée et gâteau roulé aux noix – spécialités slovènes.', tag:'food', done:false},
+    ]
+  },
+  { id:'v-zag', ville:'Zagreb', flag:'🇭🇷', dates:'29–31 juillet', open:false,
+    items:[
+      {id:'zag1', nom:'Place Ban Jelačić', desc:'Cœur animé de Zagreb. Statue équestre du ban Jelačić. Tramways, terrasses, vie locale.', tag:'must', done:false},
+      {id:'zag2', nom:'Cathédrale de Zagreb', desc:'Plus haute de Croatie (104 m). Néo-gothique. À voir la façade illuminée le soir. Entrée libre.', tag:'must', done:false},
+      {id:'zag3', nom:'Marché Dolac', desc:'«Le ventre de Zagreb». Étals colorés de fruits, légumes, fleurs. Matin uniquement. Gratuit.', tag:'must', done:false},
+      {id:'zag4', nom:'Haute Ville – Gornji Grad', desc:'Quartier médiéval avec ruelles pavées, tours médiévales, cafés pittoresques.', tag:'must', done:false},
+      {id:'zag5', nom:'Église Saint-Marc', desc:'Toit en tuiles vernissées aux armoiries de Zagreb et de Croatie. Très photogénique.', tag:'must', done:false},
+      {id:'zag6', nom:'Funiculaire de Zagreb', desc:'Le plus court du monde (66 m, 1 min). Relie la ville basse et haute. ~0,50€.', tag:'must', done:false},
+      {id:'zag7', nom:'Museum of Broken Relationships', desc:'Musée unique – objets donnés par des gens du monde entier après une rupture. ~7€. Très touchant.', tag:'must', done:false},
+      {id:'zag8', nom:'Cimetière Mirogoj', desc:'Nécropole monumentale avec arcades et coupoles. Œuvre de l'architecte Bollé. Gratuit.', tag:'opt', done:false},
+      {id:'zag9', nom:'Parc Maksimir', desc:'Plus grand parc de Zagreb (318 ha). Zoo sur place. Idéal pour le matin du J19.', tag:'opt', done:false},
+      {id:'zag10',nom:'Rue Tkalčićeva', desc:'Rue piétonne animée avec des dizaines de terrasses et cafés. Meilleure ambiance du soir.', tag:'opt', done:false},
+      {id:'zag11',nom:'Štrukli & Čevapčići', desc:'Štrukli : pâte farcie au fromage, spécialité de Zagreb. La Štrukle au marché Dolac !', tag:'food', done:false},
+    ]
+  },
+];
+
+/* ── STATE VISITES ─────────────────────────────────────── */
+if(!state.visites) {
+  state.visites = JSON.parse(JSON.stringify(DEFAULT_VISITES));
+  save();
+}
+
+/* ── ÉTAT UI VISITES ──────────────────────────────────── */
+let vOpenCities = {};
+let vAddOpenCity = null;
+let vSelectedTag = {};
+
+const TAG_LABELS = {must:'⭐ Incontournable', opt:'👍 Optionnel', food:'🍽️ Gastronomie', free:'🆓 Gratuit'};
+
+function renderVisites() {
+  const c = document.getElementById('visites-list');
+  c.innerHTML = state.visites.map((city, ci) => {
+    const done = city.items.filter(i=>i.done).length;
+    const tot  = city.items.length;
+    const pct  = tot > 0 ? Math.round(done/tot*100) : 0;
+    const open = vOpenCities[city.id] !== false; // open by default
+
+    return `
+    <div class="vcard" id="vcard-${city.id}">
+      <div class="vcard-header" onclick="toggleVCity('${city.id}')">
+        <span class="vcard-flag">${city.flag}</span>
+        <div class="vcard-info">
+          <div class="vcard-city">${city.ville}</div>
+          <div class="vcard-dates">${city.dates}</div>
+        </div>
+        <span class="vcard-count">${done}/${tot}</span>
+        <span class="vcard-arrow" id="varr-${city.id}">${open?'▾':'▸'}</span>
+      </div>
+      <div class="vcard-prog"><div class="vcard-prog-fill" style="width:${pct}%"></div></div>
+      <div class="vcard-body" id="vbody-${city.id}" style="display:${open?'block':'none'}">
+        ${city.items.map((item, ii) => `
+          <div class="vitem${item.done?' done-v':''}" id="vitem-${item.id}">
+            <div class="vcheck${item.done?' checked':''}" onclick="toggleVisiteDone('${city.id}','${item.id}')">${item.done?'✓':''}</div>
+            <div class="vitem-body">
+              <div class="vitem-nom" contenteditable="true" onblur="editVisiteField('${city.id}','${item.id}','nom',this)">${item.nom}</div>
+              <div class="vitem-desc" contenteditable="true" onblur="editVisiteField('${city.id}','${item.id}','desc',this)">${item.desc||''}</div>
+              <div class="vitem-meta">
+                <span class="vtag ${item.tag}" onclick="cycleTag('${city.id}','${item.id}')" title="Changer catégorie">${TAG_LABELS[item.tag]||item.tag}</span>
+              </div>
+            </div>
+            <button class="vitem-del" onclick="delVisite('${city.id}','${item.id}')">🗑</button>
+          </div>
+        `).join('')}
+
+        <div class="vadd-form${vAddOpenCity===city.id?' open':''}" id="vadd-${city.id}">
+          <input id="va-nom-${city.id}" placeholder="Nom du lieu / activité">
+          <textarea id="va-desc-${city.id}" placeholder="Description, prix, infos pratiques…"></textarea>
+          <div class="vtag-select">
+            ${['must','opt','food','free'].map(t=>`
+              <span class="vtag-opt ${t}${(vSelectedTag[city.id]||'must')===t?' sel':''}" onclick="selectVTag('${city.id}','${t}')">${TAG_LABELS[t]}</span>
+            `).join('')}
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ok" style="flex:1" onclick="confirmAddVisite('${city.id}')">✓ Ajouter</button>
+            <button class="btn-no" onclick="cancelAddVisite()">✗ Annuler</button>
+          </div>
+        </div>
+        <button class="vadd-btn" onclick="openAddVisite('${city.id}')">＋ Ajouter un lieu</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleVCity(cityId) {
+  if(vOpenCities[cityId] === undefined) vOpenCities[cityId] = false; // was open (default true)
+  else vOpenCities[cityId] = !vOpenCities[cityId];
+  // re-render just this card without full redraw for speed
+  renderVisites();
+}
+
+function toggleVisiteDone(cityId, itemId) {
+  const city = state.visites.find(c=>c.id===cityId);
+  const item = city && city.items.find(i=>i.id===itemId);
+  if(item){ item.done = !item.done; save(); renderVisites(); }
+}
+
+function editVisiteField(cityId, itemId, field, el) {
+  const city = state.visites.find(c=>c.id===cityId);
+  const item = city && city.items.find(i=>i.id===itemId);
+  if(item){ item[field] = el.textContent.trim(); save(); }
+}
+
+const TAG_ORDER = ['must','opt','food','free'];
+function cycleTag(cityId, itemId) {
+  const city = state.visites.find(c=>c.id===cityId);
+  const item = city && city.items.find(i=>i.id===itemId);
+  if(!item) return;
+  const idx = TAG_ORDER.indexOf(item.tag);
+  item.tag = TAG_ORDER[(idx+1) % TAG_ORDER.length];
+  save(); renderVisites();
+}
+
+function delVisite(cityId, itemId) {
+  const city = state.visites.find(c=>c.id===cityId);
+  if(!city) return;
+  if(!confirm('Supprimer cette visite ?')) return;
+  city.items = city.items.filter(i=>i.id!==itemId);
+  save(); renderVisites();
+}
+
+function openAddVisite(cityId) {
+  vAddOpenCity = vAddOpenCity === cityId ? null : cityId;
+  if(!vSelectedTag[cityId]) vSelectedTag[cityId] = 'must';
+  renderVisites();
+  if(vAddOpenCity) {
+    setTimeout(()=>{
+      const el = document.getElementById('va-nom-'+cityId);
+      if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); }
+    }, 100);
+  }
+}
+function cancelAddVisite() { vAddOpenCity = null; renderVisites(); }
+
+function selectVTag(cityId, tag) {
+  vSelectedTag[cityId] = tag;
+  // update UI without full re-render
+  document.querySelectorAll(`#vadd-${cityId} .vtag-opt`).forEach(el=>{
+    el.classList.remove('sel');
+    if(el.classList.contains(tag)) el.classList.add('sel');
+  });
+}
+
 function toggleDay(i) {
   openDays[i] = !openDays[i];
   const body = document.getElementById('body-'+i);
@@ -1091,5 +1419,6 @@ function toggleDay(i) {
   if(arr)  arr.textContent = openDays[i] ? '▾' : '▸';
 }
 </script>
+
 </body>
 </html>

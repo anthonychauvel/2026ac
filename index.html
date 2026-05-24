@@ -72,8 +72,16 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
 .tbadge{transition:transform .1s;}
 .tbadge:active{transform:scale(0.92);}
 
-.del-btn{background:none;border:none;color:#ffbbbb;font-size:13px;cursor:pointer;padding:2px 4px;}
-.del-btn:active{color:var(--red);}
+/* ── INSERT ROW ──────────────────────────────────────── */
+.insert-btn{background:none;border:none;color:rgba(201,168,76,0.5);font-size:10px;cursor:pointer;padding:2px 4px;vertical-align:middle;}
+.insert-btn:hover,.insert-btn:active{color:var(--gold);}
+.insert-row-form{background:#fffbe6;border-top:2px dashed var(--gold);border-bottom:2px dashed var(--gold);}
+.insert-row-form td{padding:8px 6px;}
+.insert-inputs{display:flex;flex-wrap:wrap;gap:4px;align-items:center;}
+.insert-inputs input,.insert-inputs select{padding:5px 6px;border:1px solid #ddd;border-radius:6px;font-size:0.72rem;background:white;width:auto;flex:1;min-width:70px;}
+.insert-inputs .btn-ok{padding:5px 12px;font-size:0.72rem;flex-shrink:0;}
+.insert-inputs .btn-no{padding:5px 10px;font-size:0.72rem;flex-shrink:0;}
+
 
 .tbl-footer{background:var(--navy);color:white;font-size:0.75rem;}
 .tbl-footer td{padding:8px 6px;font-weight:600;border-bottom:none;}
@@ -289,40 +297,72 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
 ══════════════════════════════════════════════════════════ */
 const DEFAULT = {
   itinerary: [
-    {id:1, nom:"Brest → Bruxelles",      transport:"Train",  depart:"Brest",      arrivee:"Bruxelles",   date:"12/07",    notes:"11h15 → 17h47", montant:"",    paye:false, type:"trajet"},
-    {id:2, nom:"Bruxelles séjour",         transport:"-",      depart:"-",          arrivee:"-",           date:"12-14/07", notes:"",              montant:"170", paye:false, type:"sejour"},
-    {id:3, nom:"Bruxelles → Luxembourg",  transport:"Train",  depart:"Bruxelles",  arrivee:"Luxembourg",  date:"14/07",    notes:"7h33 → 10h49",  montant:"",    paye:false, type:"trajet"},
-    {id:4, nom:"Luxembourg séjour",        transport:"-",      depart:"-",          arrivee:"-",           date:"14-15/07", notes:"",              montant:"90",  paye:false, type:"sejour"},
-    {id:5, nom:"Luxembourg → Berlin",     transport:"Train",  depart:"Luxembourg", arrivee:"Berlin",      date:"15/07",    notes:"8h33 → 16h54",  montant:"",    paye:false, type:"trajet"},
-    {id:6, nom:"Berlin séjour",            transport:"-",      depart:"-",          arrivee:"-",           date:"15-17/07", notes:"",              montant:"140", paye:false, type:"sejour"},
-    {id:7, nom:"Berlin → Varsovie",       transport:"Train",  depart:"Berlin",     arrivee:"Varsovie",    date:"17/07",    notes:"11h19 → 17h00", montant:"",    paye:false, type:"trajet"},
-    {id:8, nom:"Varsovie séjour",          transport:"-",      depart:"-",          arrivee:"-",           date:"17-19/07", notes:"",              montant:"145", paye:false, type:"sejour"},
-    {id:9, nom:"Varsovie → Cracovie",     transport:"Train",  depart:"Varsovie",   arrivee:"Cracovie",    date:"19/07",    notes:"11h15 → 15h35", montant:"",    paye:false, type:"trajet"},
-    {id:10,nom:"Cracovie séjour",          transport:"-",      depart:"-",          arrivee:"-",           date:"19-21/07", notes:"",              montant:"97",  paye:false, type:"sejour"},
-    {id:11,nom:"Cracovie → Vienne",       transport:"Train",  depart:"Cracovie",   arrivee:"Vienne",      date:"21/07",    notes:"10h21 → 15h49", montant:"",    paye:false, type:"trajet"},
-    {id:12,nom:"Vienne séjour",            transport:"-",      depart:"-",          arrivee:"-",           date:"21-23/07", notes:"",              montant:"98",  paye:false, type:"sejour"},
-    {id:13,nom:"Vienne → Bratislava",     transport:"Train",  depart:"Vienne",     arrivee:"Bratislava",  date:"23/07",    notes:"11h14 → 12h10", montant:"",    paye:false, type:"trajet"},
-    {id:14,nom:"Bratislava séjour",        transport:"-",      depart:"-",          arrivee:"-",           date:"23-25/07", notes:"",              montant:"120", paye:false, type:"sejour"},
-    {id:15,nom:"Bratislava → Budapest",   transport:"Train",  depart:"Bratislava", arrivee:"Budapest",    date:"25/07",    notes:"10h50 → 13h25", montant:"",    paye:false, type:"trajet"},
-    {id:16,nom:"Budapest séjour",          transport:"-",      depart:"-",          arrivee:"-",           date:"25-27/07", notes:"",              montant:"315", paye:false, type:"sejour"},
-    {id:17,nom:"Budapest → Ljubljana",    transport:"Train",  depart:"Budapest",   arrivee:"Ljubljana",   date:"27/07",    notes:"12h30 → 20h07", montant:"",    paye:false, type:"trajet"},
-    {id:18,nom:"Ljubljana séjour",         transport:"-",      depart:"-",          arrivee:"-",           date:"27-29/07", notes:"",              montant:"151", paye:false, type:"sejour"},
-    {id:19,nom:"Ljubljana → Zagreb",      transport:"Train",  depart:"Ljubljana",  arrivee:"Zagreb",      date:"29/07",    notes:"10h30 → 12h50", montant:"",    paye:false, type:"trajet"},
-    {id:20,nom:"Zagreb séjour",            transport:"-",      depart:"-",          arrivee:"-",           date:"29-31/07", notes:"",              montant:"128", paye:false, type:"sejour"},
-    {id:21,nom:"Zagreb → Beauvais",       transport:"Avion",  depart:"Zagreb",     arrivee:"Beauvais",    date:"31/07",    notes:"13h40 → 15h55", montant:"",    paye:false, type:"trajet"},
-    {id:22,nom:"Beauvais → Brest",        transport:"Train",  depart:"Beauvais",   arrivee:"Brest",       date:"31/07",    notes:"20h59 → 00h43", montant:"",    paye:false, type:"trajet"},
+    // ── BREST → BRUXELLES ──
+    {id:1,  nom:"Brest → Rennes",            transport:"Train",  depart:"Brest",      arrivee:"Rennes",      date:"12/07", notes:"12h00 → 14h30", montant:"35",  paye:false, type:"trajet"},
+    {id:2,  nom:"Rennes → Bruxelles-Midi",   transport:"Train",  depart:"Rennes",     arrivee:"Bruxelles",   date:"12/07", notes:"15h35 → 19h17", montant:"55",  paye:false, type:"trajet"},
+    {id:3,  nom:"Bruxelles séjour J1",       transport:"-",      depart:"-",          arrivee:"-",           date:"12/07", notes:"Soirée libre – Grand-Place", montant:"", paye:false, type:"sejour"},
+    {id:4,  nom:"Bruxelles J2 – visites",    transport:"-",      depart:"-",          arrivee:"-",           date:"13/07", notes:"Grand-Place · Manneken Pis · Galeries Royales", montant:"", paye:false, type:"sejour"},
+    {id:5,  nom:"Bruxelles hébergement",     transport:"-",      depart:"-",          arrivee:"-",           date:"12-14/07", notes:"Hôtel À définir",         montant:"170", paye:false, type:"sejour"},
+    // ── BRUXELLES → LUXEMBOURG ──
+    {id:6,  nom:"Bruxelles → Luxembourg",    transport:"Train",  depart:"Bruxelles",  arrivee:"Luxembourg",  date:"14/07", notes:"08h32 → 11h49", montant:"29",  paye:false, type:"trajet"},
+    {id:7,  nom:"Luxembourg – visites J3",   transport:"-",      depart:"-",          arrivee:"-",           date:"14/07", notes:"Pont Adolphe · Cathédrale ND · Corniche · Casemates · Grund", montant:"", paye:false, type:"sejour"},
+    {id:8,  nom:"Luxembourg hébergement",    transport:"-",      depart:"-",          arrivee:"-",           date:"14-15/07", notes:"Hôtel Zurich – Kirchberg",montant:"90",  paye:false, type:"sejour"},
+    // ── LUXEMBOURG → BERLIN ──
+    {id:9,  nom:"Luxembourg → Berlin",       transport:"Train",  depart:"Luxembourg", arrivee:"Berlin",      date:"15/07", notes:"09h32 → 15h10", montant:"45",  paye:false, type:"trajet"},
+    {id:10, nom:"Berlin – visites J4",       transport:"-",      depart:"-",          arrivee:"-",           date:"15/07", notes:"Porte de Brandebourg · Reichstag · Mémorial Holocaust · Unter den Linden · Berliner Dom · Alexanderplatz", montant:"", paye:false, type:"sejour"},
+    {id:11, nom:"Berlin – visites J5",       transport:"-",      depart:"-",          arrivee:"-",           date:"16/07", notes:"East Side Gallery · Checkpoint Charlie · Potsdamer Platz · Tiergarten · Siegessäule · Mauerpark", montant:"", paye:false, type:"sejour"},
+    {id:12, nom:"Berlin hébergement",        transport:"-",      depart:"-",          arrivee:"-",           date:"15-17/07", notes:"martas Hotel Allegra – Albrechtstr. 17",  montant:"140", paye:false, type:"sejour"},
+    // ── BERLIN → VARSOVIE ──
+    {id:13, nom:"Berlin → Varsovie",         transport:"Train",  depart:"Berlin",     arrivee:"Varsovie",    date:"17/07", notes:"08h30 → 14h00", montant:"39",  paye:false, type:"trajet"},
+    {id:14, nom:"Varsovie – visites J6",     transport:"-",      depart:"-",          arrivee:"-",           date:"17/07", notes:"Palais Culture · Złote Tarasy · Vieille Ville · Château Royal · Nowy Świat", montant:"", paye:false, type:"sejour"},
+    {id:15, nom:"Varsovie – visites J7",     transport:"-",      depart:"-",          arrivee:"-",           date:"18/07", notes:"Parc Łazienki · Palais sur l'Eau · Stade National · Musée Insurrection · Quartier Praga", montant:"", paye:false, type:"sejour"},
+    {id:16, nom:"Varsovie hébergement",      transport:"-",      depart:"-",          arrivee:"-",           date:"17-19/07", notes:"Sound Garden Hotel Airport – Żwirki i Wigury 18", montant:"145", paye:false, type:"sejour"},
+    // ── VARSOVIE → CRACOVIE ──
+    {id:17, nom:"Varsovie → Cracovie",       transport:"Train",  depart:"Varsovie",   arrivee:"Cracovie",    date:"19/07", notes:"09h00 → 11h25", montant:"22",  paye:false, type:"trajet"},
+    {id:18, nom:"Cracovie – visites J8",     transport:"-",      depart:"-",          arrivee:"-",           date:"19/07", notes:"Rynek Główny · Basilique Ste-Marie · Château Wawel · Dragon · Quartier Kazimierz", montant:"", paye:false, type:"sejour"},
+    {id:19, nom:"Excursion Auschwitz J9",    transport:"Train",  depart:"Cracovie",   arrivee:"Oświęcim",    date:"20/07", notes:"08h06 → retour 17h37 · Auschwitz I & Birkenau", montant:"15", paye:false, type:"trajet"},
+    {id:20, nom:"Cracovie hébergement",      transport:"-",      depart:"-",          arrivee:"-",           date:"19-21/07", notes:"Hôtel Krakus – ul. Nowohucka 35", montant:"97",  paye:false, type:"sejour"},
+    // ── CRACOVIE → VIENNE ──
+    {id:21, nom:"Cracovie → Vienne",         transport:"Train",  depart:"Cracovie",   arrivee:"Vienne",      date:"21/07", notes:"06h20 → 13h00", montant:"49",  paye:false, type:"trajet"},
+    {id:22, nom:"Vienne – visites J10",      transport:"-",      depart:"-",          arrivee:"-",           date:"21/07", notes:"Karlskirche · Opéra · Parlement · Rathaus · MuseumsQuartier · Stephansdom", montant:"", paye:false, type:"sejour"},
+    {id:23, nom:"Vienne – visites J11",      transport:"-",      depart:"-",          arrivee:"-",           date:"22/07", notes:"Château Schönbrunn · Gloriette · Naschmarkt · Belvedere · Stadtpark · Innere Stadt", montant:"", paye:false, type:"sejour"},
+    {id:24, nom:"Vienne hébergement",        transport:"-",      depart:"-",          arrivee:"-",           date:"21-23/07", notes:"a&o Wien Stadthalle – Lerchenfelder Gürtel 9-11", montant:"98",  paye:false, type:"sejour"},
+    // ── VIENNE → BRATISLAVA ──
+    {id:25, nom:"Vienne → Bratislava",       transport:"Train",  depart:"Vienne",     arrivee:"Bratislava",  date:"23/07", notes:"10h15 → 11h21", montant:"15",  paye:false, type:"trajet"},
+    {id:26, nom:"Bratislava – visites J12",  transport:"-",      depart:"-",          arrivee:"-",           date:"23/07", notes:"Slavín · Château Bratislava · Vieille Ville · Cathédrale St-Martin · Pont UFO · Eurovea", montant:"", paye:false, type:"sejour"},
+    {id:27, nom:"Bratislava – visites J13",  transport:"-",      depart:"-",          arrivee:"-",           date:"24/07", notes:"Château Devín · Musée Danubiana · Parc Sad Janka Kráľa · Staré Mesto", montant:"", paye:false, type:"sejour"},
+    {id:28, nom:"Bratislava hébergement",    transport:"-",      depart:"-",          arrivee:"-",           date:"23-25/07", notes:"Pension Zlata Noha – Bellova 2A, Koliba", montant:"120", paye:false, type:"sejour"},
+    // ── BRATISLAVA → BUDAPEST ──
+    {id:29, nom:"Bratislava → Budapest",     transport:"Train",  depart:"Bratislava", arrivee:"Budapest",    date:"25/07", notes:"08h10 → 10h33", montant:"19",  paye:false, type:"trajet"},
+    {id:30, nom:"Budapest – visites J14",    transport:"-",      depart:"-",          arrivee:"-",           date:"25/07", notes:"Parlement · Pont des Chaînes · Basilique St-Étienne · Île Marguerite", montant:"", paye:false, type:"sejour"},
+    {id:31, nom:"Budapest – visites J15",    transport:"-",      depart:"-",          arrivee:"-",           date:"26/07", notes:"Place des Héros · Château Vajdahunyad · Andrássy · New York Café · Váci Utca · Liberty Bridge", montant:"", paye:false, type:"sejour"},
+    {id:32, nom:"Budapest hébergement",      transport:"-",      depart:"-",          arrivee:"-",           date:"25-27/07", notes:"Hôtel Metro – Kresz Géza u. 1", montant:"315", paye:false, type:"sejour"},
+    // ── BUDAPEST → LJUBLJANA ──
+    {id:33, nom:"Budapest → Ljubljana",      transport:"Train",  depart:"Budapest",   arrivee:"Ljubljana",   date:"27/07", notes:"07h00 → 14h00", montant:"35",  paye:false, type:"trajet"},
+    {id:34, nom:"Ljubljana – visites J16",   transport:"-",      depart:"-",          arrivee:"-",           date:"27/07", notes:"Pont du Dragon · Triple Bridge · Pl. Prešeren · Château Ljubljana", montant:"", paye:false, type:"sejour"},
+    {id:35, nom:"Ljubljana – visites J17",   transport:"-",      depart:"-",          arrivee:"-",           date:"28/07", notes:"Parc Tivoli · Nebotičnik Tower · Metelkova Art District · Marché Central", montant:"", paye:false, type:"sejour"},
+    {id:36, nom:"Ljubljana hébergement",     transport:"-",      depart:"-",          arrivee:"-",           date:"27-29/07", notes:"B&B Hotel Park – Tabor 9", montant:"151", paye:false, type:"sejour"},
+    // ── LJUBLJANA → ZAGREB ──
+    {id:37, nom:"Ljubljana → Zagreb",        transport:"Train",  depart:"Ljubljana",  arrivee:"Zagreb",      date:"29/07", notes:"08h25 → 11h00", montant:"25",  paye:false, type:"trajet"},
+    {id:38, nom:"Zagreb – visites J18",      transport:"-",      depart:"-",          arrivee:"-",           date:"29/07", notes:"Zrinjevac · Ban Jelačić · Cathédrale · Marché Dolac · Gornji Grad · Église St-Marc", montant:"", paye:false, type:"sejour"},
+    {id:39, nom:"Zagreb – visites J19",      transport:"-",      depart:"-",          arrivee:"-",           date:"30/07", notes:"Cimetière Mirogoj · Parc Maksimir · Funiculaire · Museum Broken Relationships", montant:"", paye:false, type:"sejour"},
+    {id:40, nom:"Zagreb hébergement",        transport:"-",      depart:"-",          arrivee:"-",           date:"29-31/07", notes:"Hôtel Laguna – Kranjčevićeva 29", montant:"128", paye:false, type:"sejour"},
+    // ── RETOUR ──
+    {id:41, nom:"Zagreb → Beauvais",         transport:"Avion",  depart:"Zagreb ZAG", arrivee:"Beauvais BVA",date:"31/07", notes:"12h20 → 14h20 · Ryanair",  montant:"89",  paye:false, type:"trajet"},
+    {id:42, nom:"Navette Beauvais → Paris",  transport:"Bus",    depart:"Beauvais",   arrivee:"Paris Maillot",date:"31/07",notes:"~15h30 → 16h45 · navette Ryanair", montant:"17", paye:false, type:"trajet"},
+    {id:43, nom:"Paris → Brest",             transport:"Train",  depart:"Paris Montparnasse",arrivee:"Brest",date:"31/07",notes:"20h59 → 00h43",montant:"65",  paye:false, type:"trajet"},
   ],
   hotels: [
-    {id:"h1", ville:"Bruxelles",  dates:"12–14/07", nom:"À définir",              adresse:"", phone:"", prix:"170", paye:false, notes:""},
-    {id:"h2", ville:"Luxembourg", dates:"14–15/07", nom:"Hôtel Zurich",            adresse:"Plateau de Kirchberg, Luxembourg", phone:"", prix:"90",  paye:false, notes:"Arrivée 19h50"},
-    {id:"h3", ville:"Berlin",     dates:"15–17/07", nom:"Hôtel Martas Allegra",    adresse:"Berlin", phone:"", prix:"140", paye:false, notes:"Check-in 20h00"},
-    {id:"h4", ville:"Varsovie",   dates:"17–19/07", nom:"Sound Garden Hotel Airport",adresse:"Varsovie", phone:"", prix:"145", paye:false, notes:"Check-in 16h30"},
-    {id:"h5", ville:"Cracovie",   dates:"19–21/07", nom:"Hôtel Krakus",            adresse:"Cracovie", phone:"", prix:"97",  paye:false, notes:"Check-in 16h15"},
-    {id:"h6", ville:"Vienne",     dates:"21–23/07", nom:"a&o Wien Stadthalle",     adresse:"Vienne", phone:"", prix:"98",  paye:false, notes:"Check-in 17h30"},
-    {id:"h7", ville:"Bratislava", dates:"23–25/07", nom:"Pension Zlata Noha",      adresse:"Bratislava", phone:"", prix:"120", paye:false, notes:"Check-in 17h30"},
-    {id:"h8", ville:"Budapest",   dates:"25–27/07", nom:"Hôtel Metro",             adresse:"Budapest", phone:"", prix:"315", paye:false, notes:"Check-in 13h00"},
-    {id:"h9", ville:"Ljubljana",  dates:"27–29/07", nom:"B&B Hotel Park",          adresse:"Ljubljana", phone:"", prix:"151", paye:false, notes:"Check-in 17h30"},
-    {id:"h10",ville:"Zagreb",     dates:"29–31/07", nom:"Hôtel Laguna",            adresse:"Zagreb", phone:"", prix:"128", paye:false, notes:"Check-in 17h00 · Check-out 09h00 le 31/07"},
+    {id:"h1", ville:"Bruxelles",  dates:"12–14/07", nom:"À définir",                 adresse:"Bruxelles, Belgique", phone:"", prix:"170", paye:false, notes:"Hôtel non encore réservé"},
+    {id:"h2", ville:"Luxembourg", dates:"14–15/07", nom:"Hôtel Zurich",               adresse:"Plateau de Kirchberg, Luxembourg", phone:"", prix:"90",  paye:false, notes:"Arrivée 19h50"},
+    {id:"h3", ville:"Berlin",     dates:"15–17/07", nom:"martas Hotel Allegra Berlin", adresse:"Albrechtstr. 17, 10117 Berlin, Allemagne", phone:"+49 30 308680", prix:"140", paye:false, notes:"Check-in 20h00 · 3★ · WiFi gratuit · près de Friedrichstraße"},
+    {id:"h4", ville:"Varsovie",   dates:"17–19/07", nom:"Sound Garden Hotel Airport",  adresse:"ul. Żwirki i Wigury 18, 02-092 Varsovie, Pologne", phone:"+48 22 279 14 00", prix:"145", paye:false, notes:"Check-in 16h30 · 4★ · 2 km de l'aéroport Chopin"},
+    {id:"h5", ville:"Cracovie",   dates:"19–21/07", nom:"Hôtel Krakus",               adresse:"ul. Nowohucka 35, 30-728 Kraków, Pologne", phone:"+48 12 652 02 02", prix:"97",  paye:false, notes:"Check-in 16h15 · 3★ · restaurant sur place · 5 km du centre"},
+    {id:"h6", ville:"Vienne",     dates:"21–23/07", nom:"a&o Wien Stadthalle",         adresse:"Lerchenfelder Gürtel 9-11, 1160 Vienne, Autriche", phone:"+43 1 493 0480 3900", prix:"98",  paye:false, notes:"Check-in 17h30 · 3★ · 3 min du métro Burggasse-Stadthalle"},
+    {id:"h7", ville:"Bratislava", dates:"23–25/07", nom:"Pension Zlata Noha",          adresse:"Bellova 2A, 831 01 Bratislava, Slovaquie", phone:"+421 2 5477 4922", prix:"120", paye:false, notes:"Check-in 17h30 · Quartier Koliba · vue panoramique sur la ville"},
+    {id:"h8", ville:"Budapest",   dates:"25–27/07", nom:"Hôtel Metro",                 adresse:"Kresz Géza u. 1, 1132 Budapest, Hongrie", phone:"+36 30 479 5481", prix:"315", paye:false, notes:"Check-in 13h00 · proche gare Nyugati et métro · 1 km du Parlement"},
+    {id:"h9", ville:"Ljubljana",  dates:"27–29/07", nom:"B&B Hotel Ljubljana Park",    adresse:"Tabor 9, 1000 Ljubljana, Slovénie", phone:"+386 1 300 2500", prix:"151", paye:false, notes:"Check-in 15h00 · 3★ · vue château · 800 m de la gare"},
+    {id:"h10",ville:"Zagreb",     dates:"29–31/07", nom:"Hôtel Laguna Zagreb",         adresse:"Kranjčevićeva 29, 10000 Zagreb, Croatie", phone:"+385 1 3047 000", prix:"128", paye:false, notes:"Check-in 14h00 · Check-out 10h00 · restaurant sur place · parking"},
   ],
   gares: [
     {id:"g1",  ville:"Brest",      type:"Gare",      nom:"Gare de Brest",              adresse:"Place du 19ème RI, 29200 Brest",                    notes:""},
@@ -452,10 +492,13 @@ function cycleTransport(id) {
   r.transport = TRANSPORTS[(idx+1) % TRANSPORTS.length];
   save(); renderItinerary();
 }
+let insertAfter = null;
+
 function renderItinerary() {
   const tbody = document.getElementById('itin-tbody');
-  tbody.innerHTML = state.itinerary.map(r=>`
-    <tr class="${r.type}" data-id="${r.id}">
+  let html = '';
+  state.itinerary.forEach(r => {
+    html += `<tr class="${r.type}" data-id="${r.id}">
       <td><span contenteditable="true" data-field="nom" data-id="${r.id}" onblur="cellEdit(this)">${r.nom}</span></td>
       <td>${tBadge(r.transport, r.id)}</td>
       <td><span contenteditable="true" data-field="depart" data-id="${r.id}" onblur="cellEdit(this)">${r.depart}</span></td>
@@ -464,10 +507,64 @@ function renderItinerary() {
       <td><span contenteditable="true" data-field="notes" data-id="${r.id}" onblur="cellEdit(this)">${r.notes}</span></td>
       <td><span contenteditable="true" data-field="montant" data-id="${r.id}" onblur="cellEdit(this)">${r.montant}</span></td>
       <td><button class="paid-btn ${r.paye?'oui':'non'}" onclick="togglePaid('itin',${r.id})">${r.paye?'✓ Oui':'✗ Non'}</button></td>
-      <td><button class="del-btn" onclick="delRow(${r.id})">🗑</button></td>
-    </tr>
-  `).join('');
+      <td style="white-space:nowrap">
+        <button class="insert-btn" onclick="showInsertForm(${r.id})" title="Insérer une ligne après">＋↓</button>
+        <button class="del-btn" onclick="delRow(${r.id})">🗑</button>
+      </td>
+    </tr>`;
+    if(insertAfter === r.id) {
+      html += `<tr class="insert-row-form" id="insert-form-row">
+        <td colspan="9"><div class="insert-inputs">
+          <input id="if-nom" placeholder="Nom étape">
+          <select id="if-transport"><option>Train</option><option>FlixBus</option><option>Avion</option><option>Bus</option><option>Voiture</option><option>-</option></select>
+          <input id="if-date" placeholder="Date">
+          <input id="if-depart" placeholder="Départ">
+          <input id="if-arrivee" placeholder="Arrivée">
+          <input id="if-notes" placeholder="Notes/horaires">
+          <input id="if-montant" placeholder="€" type="number" style="max-width:60px">
+          <select id="if-type"><option value="trajet">Trajet</option><option value="sejour">Séjour</option></select>
+          <button class="btn-ok" onclick="confirmInsert(${r.id})">✓ Ajouter</button>
+          <button class="btn-no" onclick="cancelInsert()">✗</button>
+        </div></td>
+      </tr>`;
+    }
+  });
+  tbody.innerHTML = html;
   renderFooter();
+}
+
+function showInsertForm(afterId) {
+  insertAfter = (insertAfter === afterId) ? null : afterId;
+  renderItinerary();
+  if(insertAfter !== null) {
+    setTimeout(()=>{
+      const el = document.getElementById('insert-form-row');
+      if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+      const n = document.getElementById('if-nom');
+      if(n) n.focus();
+    }, 100);
+  }
+}
+function cancelInsert() { insertAfter = null; renderItinerary(); }
+function confirmInsert(afterId) {
+  const nom = document.getElementById('if-nom').value.trim();
+  if(!nom) return alert('Entrez un nom');
+  const newRow = {
+    id: Date.now(),
+    nom,
+    transport: document.getElementById('if-transport').value,
+    date:      document.getElementById('if-date').value.trim(),
+    depart:    document.getElementById('if-depart').value.trim(),
+    arrivee:   document.getElementById('if-arrivee').value.trim(),
+    notes:     document.getElementById('if-notes').value.trim(),
+    montant:   document.getElementById('if-montant').value.trim(),
+    paye: false,
+    type: document.getElementById('if-type').value,
+  };
+  const idx = state.itinerary.findIndex(r => r.id === afterId);
+  state.itinerary.splice(idx + 1, 0, newRow);
+  insertAfter = null;
+  save(); renderItinerary();
 }
 
 function renderFooter() {

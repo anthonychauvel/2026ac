@@ -132,6 +132,25 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
 .ic-paid-lbl{font-size:0.75rem;color:#555;}
 .map-link{display:inline-flex;align-items:center;gap:4px;font-size:0.68rem;color:var(--navy);background:var(--light);border:none;border-radius:20px;padding:4px 10px;cursor:pointer;text-decoration:none;margin-top:6px;}
 .map-link:active{background:var(--gold);color:white;}
+/* ── IMAGE BANK ──────────────────────────────────────────── */
+.img-bank{margin-top:10px;padding-top:10px;border-top:1px solid #f0ece4;}
+.img-bank-title{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray);margin-bottom:6px;font-weight:600;}
+.img-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;}
+.img-thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;}
+.img-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.img-thumb .img-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;}
+.img-thumb:hover .img-del,.img-thumb:active .img-del{opacity:1;}
+.img-thumb .img-cap{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:white;font-size:0.55rem;padding:2px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.img-add-btn{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;padding:7px;border:2px dashed #d0ccc0;border-radius:8px;background:none;color:var(--gray);font-size:0.72rem;cursor:pointer;transition:all .15s;}
+.img-add-btn:active{border-color:var(--gold);color:var(--gold);}
+/* ── IMAGE MODAL ─────────────────────────────────────────── */
+.img-modal{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;}
+.img-modal img{max-width:100%;max-height:80vh;border-radius:10px;object-fit:contain;}
+.img-modal-cap{color:rgba(255,255,255,0.7);font-size:0.75rem;margin-top:8px;text-align:center;}
+.img-modal-cap[contenteditable=true]{outline:1px dashed rgba(255,255,255,0.3);padding:2px 8px;border-radius:4px;}
+.img-modal-close{position:absolute;top:12px;right:16px;background:none;border:none;color:white;font-size:24px;cursor:pointer;}
+.img-modal-del{background:#e05252;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:0.78rem;margin-top:10px;cursor:pointer;}
+
 .map-mini{display:inline-flex;align-items:center;gap:3px;font-size:0.62rem;color:#2166ac;text-decoration:none;background:#e8f4fd;border-radius:12px;padding:2px 7px;flex-shrink:0;}
 .map-mini:active{background:#2166ac;color:white;}
 
@@ -245,6 +264,7 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
     <div class="tab" onclick="showTab('checklist',this)">✅ Checklist</div>
     <div class="tab" onclick="showTab('programme',this)">📅 Jours</div>
     <div class="tab" onclick="showTab('visites',this)">🏛️ Visites</div>
+    <div class="tab" onclick="showTab('imgbank',this)">📷 Photos</div>
   </div>
 </div>
 
@@ -325,6 +345,13 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--crea
       <thead><tr><th>Catégorie / Étape</th><th>Total</th><th>Statut</th><th>Reste</th></tr></thead>
       <tbody id="budget-rows"></tbody>
     </table>
+  </div>
+
+  <!-- ═══ BANQUE PHOTOS ═══════════════════════════════════ -->
+  <div class="section" id="sec-imgbank">
+    <div class="section-title">📷 Banque de photos</div>
+    <p style="font-size:0.75rem;color:var(--gray);margin-bottom:12px">Toutes vos photos importées depuis les onglets Hôtels, Gares et Visites. Appuyez sur une photo pour voir en grand et modifier la légende.</p>
+    <div id="imgbank-list"></div>
   </div>
 
   <!-- ═══ PROGRAMME JOURNALIER ════════════════════════ -->
@@ -516,6 +543,7 @@ function showTab(id, el) {
   if(id==='checklist') renderChecklist();
   if(id==='programme') renderProgramme();
   if(id==='visites') renderVisites();
+  if(id==='imgbank') renderImageBank();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -733,10 +761,16 @@ function renderHotels() {
           <label>Notes (confirmation, code, étage…)</label>
           <div contenteditable="true" class="if-edit" data-hid="${h.id}" data-hfield="notes" onblur="hotelEdit(this)">${h.notes||''}</div>
         </div>
-        <a class="map-link" href="https://maps.google.com/?q=${encodeURIComponent((h.nom||h.ville+' hôtel')+' '+h.adresse)}" target="_blank">📍 Ouvrir dans Maps</a>
+        <a class="map-link" onclick="openMapHotel('${h.id}');return false;" href="#">📍 Ouvrir dans Maps</a>
+        <div class="img-bank">
+          <div class="img-bank-title">📷 Photos / documents</div>
+          <div class="img-grid" id="imgs-hotel-${h.id}"></div>
+          <button class="img-add-btn" onclick="pickImage('hotel','${h.id}')">📷 Ajouter une photo</button>
+        </div>
       </div>
     </div>
   `).join('');
+  renderAllEntityImages('hotel');
 }
 
 function hotelEdit(el) {
@@ -843,7 +877,12 @@ function renderGares() {
           <label>Notes (quai, terminal, navette, locker…)</label>
           <div contenteditable="true" class="if-edit" data-gid="${g.id}" data-gfield="notes" onblur="gareEdit(this)">${g.notes||''}</div>
         </div>
-        <a class="map-link" href="https://maps.google.com/?q=${encodeURIComponent(g.nom+' '+g.adresse)}" target="_blank">📍 Ouvrir dans Maps</a>
+        <a class="map-link" onclick="openMapGare('${g.id}');return false;" href="#">📍 Ouvrir dans Maps</a>
+        <div class="img-bank">
+          <div class="img-bank-title">📷 Photos / documents</div>
+          <div class="img-grid" id="imgs-gare-${g.id}"></div>
+          <button class="img-add-btn" onclick="pickImage('gare','${g.id}')">📷 Ajouter une photo</button>
+        </div>
       </div>
     </div>`;
 
@@ -1386,6 +1425,7 @@ function renderVisites() {
               <div class="vitem-meta" style="flex-wrap:wrap;gap:5px">
                 <span class="vtag ${item.tag}" onclick="cycleTag('${city.id}','${item.id}')" title="Changer catégorie">${TAG_LABELS[item.tag]||item.tag}</span>
                 <a class="map-mini" href="https://maps.google.com/?q=${encodeURIComponent(item.nom+' '+city.ville)}" target="_blank">📍 Maps</a>
+                <button class="map-mini" style="border:none;cursor:pointer;background:#e8f5e9;color:#1b5e20" onclick="pickImage('visite','${item.id}')">📷 ${(state.images||[]).filter(i=>i.entityId==='${item.id}').length||''} Photo</button>
               </div>
             </div>
             <button class="vitem-del" onclick="delVisite('${city.id}','${item.id}')">🗑</button>
@@ -1468,6 +1508,182 @@ function selectVTag(cityId, tag) {
     el.classList.remove('sel');
     if(el.classList.contains(tag)) el.classList.add('sel');
   });
+}
+
+/* ══════════════════════════════════════════════════════════
+   LIENS GOOGLE MAPS DYNAMIQUES (lit l'état courant)
+══════════════════════════════════════════════════════════ */
+function openMapHotel(hid) {
+  const h = state.hotels.find(h=>h.id===hid);
+  if(!h) return;
+  const q = [(h.nom||'hôtel'), h.adresse, h.ville].filter(Boolean).join(' ');
+  window.open('https://maps.google.com/?q='+encodeURIComponent(q),'_blank');
+}
+function openMapGare(gid) {
+  const g = state.gares.find(g=>g.id===gid);
+  if(!g) return;
+  const q = [g.nom, g.adresse, g.ville].filter(Boolean).join(' ');
+  window.open('https://maps.google.com/?q='+encodeURIComponent(q),'_blank');
+}
+// Patch hotelEdit et gareEdit pour mettre à jour le lien Maps inline
+const _origHotelEdit = window.hotelEdit;
+function hotelEdit(el) {
+  const hid = el.dataset.hid;
+  const field = el.dataset.hfield;
+  const h = state.hotels.find(h=>h.id===hid);
+  if(h){ h[field]=el.textContent.trim(); save(); syncBudget(); syncProgramme(); }
+}
+const _origGareEdit = window.gareEdit;
+function gareEdit(el) {
+  const gid = el.dataset.gid;
+  const field = el.dataset.gfield;
+  const g = state.gares.find(g=>g.id===gid);
+  if(g){ g[field]=el.textContent.trim(); save(); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   BANQUE D'IMAGES
+══════════════════════════════════════════════════════════ */
+if(!state.images) { state.images=[]; save(); }
+
+// Compress & store image
+function pickImage(entityType, entityId) {
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.multiple=true;
+  inp.onchange = async e => {
+    for(const file of Array.from(e.target.files||[])) {
+      await processImage(file, entityType, entityId);
+    }
+    refreshImageViews(entityType, entityId);
+  };
+  inp.click();
+}
+
+function processImage(file, entityType, entityId) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
+        const canvas = document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        const data = canvas.toDataURL('image/jpeg',0.72);
+        state.images.push({
+          id: 'img'+Date.now()+Math.random().toString(36).slice(2,6),
+          entityId, entityType,
+          name: file.name,
+          data,
+          caption: '',
+          ts: Date.now()
+        });
+        try { save(); } catch(e) {
+          alert('⚠️ Stockage plein. Supprimez des photos pour en ajouter.');
+          state.images.pop();
+        }
+        resolve();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function getEntityImages(entityType, entityId) {
+  return (state.images||[]).filter(i=>i.entityType===entityType && i.entityId===entityId);
+}
+
+function renderEntityImageGrid(entityType, entityId) {
+  const imgs = getEntityImages(entityType, entityId);
+  const containerId = 'imgs-'+entityType+'-'+entityId;
+  const c = document.getElementById(containerId);
+  if(!c) return;
+  c.innerHTML = imgs.map(img=>`
+    <div class="img-thumb" onclick="viewImage('${img.id}')">
+      <img src="${img.data}" alt="${img.name}" loading="lazy">
+      <div class="img-cap">${img.caption||img.name}</div>
+      <button class="img-del" onclick="event.stopPropagation();deleteImage('${img.id}','${entityType}','${entityId}')">✕</button>
+    </div>
+  `).join('');
+}
+
+function renderAllEntityImages(entityType) {
+  const entities = entityType==='hotel' ? state.hotels : state.gares;
+  entities.forEach(e => renderEntityImageGrid(entityType, e.id));
+}
+
+function refreshImageViews(entityType, entityId) {
+  renderEntityImageGrid(entityType, entityId);
+  // Update photo count badge in visites
+  if(entityType==='visite') renderVisites();
+}
+
+function deleteImage(imgId, entityType, entityId) {
+  state.images = (state.images||[]).filter(i=>i.id!==imgId);
+  save(); refreshImageViews(entityType, entityId);
+}
+
+function viewImage(imgId) {
+  const img = (state.images||[]).find(i=>i.id===imgId);
+  if(!img) return;
+  // Remove existing modal
+  document.getElementById('imgModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id='imgModal'; modal.className='img-modal';
+  modal.innerHTML=`
+    <button class="img-modal-close" onclick="closeImgModal()">✕</button>
+    <img src="${img.data}" alt="${img.name}">
+    <div class="img-modal-cap" contenteditable="true" onblur="saveCaption('${imgId}',this)">${img.caption||img.name}</div>
+    <button class="img-modal-del" onclick="deleteImageModal('${imgId}')">🗑 Supprimer</button>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e=>{ if(e.target===modal) closeImgModal(); });
+}
+function closeImgModal() { document.getElementById('imgModal')?.remove(); }
+function saveCaption(imgId, el) {
+  const img = (state.images||[]).find(i=>i.id===imgId);
+  if(img){ img.caption=el.textContent.trim(); save(); }
+}
+function deleteImageModal(imgId) {
+  const img = (state.images||[]).find(i=>i.id===imgId);
+  if(!img) return;
+  state.images = state.images.filter(i=>i.id!==imgId);
+  save(); closeImgModal();
+  refreshImageViews(img.entityType, img.entityId);
+}
+
+// ── Onglet Images global (accessible depuis le menu) ──────
+function renderImageBank() {
+  const c = document.getElementById('imgbank-list');
+  if(!c) return;
+  const all = state.images||[];
+  if(!all.length){
+    c.innerHTML='<div style="text-align:center;padding:30px;color:var(--gray)">Aucune photo importée.<br>Ajoutez des photos depuis les onglets Hôtels, Gares ou Visites.</div>';
+    return;
+  }
+  // Group by entityType
+  const groups = {};
+  all.forEach(img => {
+    const key = img.entityType;
+    if(!groups[key]) groups[key]=[];
+    groups[key].push(img);
+  });
+  const typeLabel = {hotel:'🏨 Hôtels', gare:'🚉 Gares & Aéroports', visite:'🏛️ Visites'};
+  c.innerHTML = Object.entries(groups).map(([type,imgs])=>`
+    <div style="margin-bottom:16px">
+      <div class="section-title" style="font-size:0.85rem;margin-bottom:8px">${typeLabel[type]||type}</div>
+      <div class="img-grid" style="grid-template-columns:repeat(4,1fr)">${imgs.map(img=>`
+        <div class="img-thumb" onclick="viewImage('${img.id}')">
+          <img src="${img.data}" alt="${img.name}" loading="lazy">
+          <div class="img-cap">${img.caption||img.name}</div>
+          <button class="img-del" onclick="event.stopPropagation();deleteImage('${img.id}','${img.entityType}','${img.entityId}')">✕</button>
+        </div>`).join('')}
+      </div>
+    </div>
+  `).join('');
 }
 
 function toggleDay(i) {

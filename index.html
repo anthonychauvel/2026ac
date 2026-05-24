@@ -744,33 +744,78 @@ function toggleHotelPaid(hid) {
 /* ══════════════════════════════════════════════════════════
    GARES
 ══════════════════════════════════════════════════════════ */
+let gareAddOpen = false;
+
 function renderGares() {
   const c = document.getElementById('gares-list');
+  const typeIcon = {Gare:'🚉', Aéroport:'✈️', Bus:'🚌'};
+  const typeColor= {Gare:'#1565c0', Aéroport:'#e65100', Bus:'#6a1b9a'};
   c.innerHTML = state.gares.map(g=>`
-    <div class="info-card" style="border-left-color:${g.type==='Aéroport'?'#e65100':'#1565c0'}">
+    <div class="info-card" style="border-left-color:${typeColor[g.type]||'#1565c0'}">
       <div class="ic-header">
-        <div>
-          <div class="ic-city">${g.type==='Aéroport'?'✈️':'🚉'} ${g.ville}</div>
-          <div class="ic-dates">${g.type}</div>
+        <div style="flex:1;min-width:0">
+          <div class="ic-city" style="display:flex;align-items:center;gap:4px">
+            <span>${typeIcon[g.type]||'🚉'}</span>
+            <span contenteditable="true" data-gid="${g.id}" data-gfield="ville"
+              onblur="gareEdit(this)"
+              style="outline:none;font-family:Georgia,serif;font-weight:bold;font-size:0.95rem;color:var(--navy)">${g.ville}</span>
+          </div>
+          <select onchange="gareTypeChange('${g.id}',this.value)"
+            style="font-size:0.65rem;border:1px solid #eee;border-radius:5px;background:transparent;color:var(--gray);padding:1px 4px;margin-top:2px">
+            ${['Gare','Aéroport','Bus'].map(t=>'<option'+(g.type===t?' selected':'')+'>'+t+'</option>').join('')}
+          </select>
         </div>
+        <button onclick="delGare('${g.id}')"
+          style="background:none;border:none;color:#ffbbbb;font-size:18px;cursor:pointer;padding:2px 6px;flex-shrink:0">🗑</button>
       </div>
       <div class="ic-body">
         <div class="if">
-          <label>Nom de la gare / aéroport</label>
+          <label>Nom officiel</label>
           <div contenteditable="true" class="if-edit" data-gid="${g.id}" data-gfield="nom" onblur="gareEdit(this)">${g.nom||''}</div>
         </div>
         <div class="if">
           <label>Adresse</label>
           <div contenteditable="true" class="if-edit" data-gid="${g.id}" data-gfield="adresse" onblur="gareEdit(this)">${g.adresse||''}</div>
         </div>
+        <div class="if-row">
+          <div class="if">
+            <label>Téléphone / info</label>
+            <div contenteditable="true" class="if-edit" data-gid="${g.id}" data-gfield="phone" onblur="gareEdit(this)">${g.phone||''}</div>
+          </div>
+          <div class="if">
+            <label>Passage prévu</label>
+            <div contenteditable="true" class="if-edit" data-gid="${g.id}" data-gfield="heure" onblur="gareEdit(this)">${g.heure||''}</div>
+          </div>
+        </div>
         <div class="if">
-          <label>Notes (quai, terminal, navette…)</label>
+          <label>Notes (quai, terminal, navette, locker…)</label>
           <div contenteditable="true" class="if-edit" data-gid="${g.id}" data-gfield="notes" onblur="gareEdit(this)">${g.notes||''}</div>
         </div>
         <a class="map-link" href="https://maps.google.com/?q=${encodeURIComponent(g.nom+' '+g.adresse)}" target="_blank">📍 Ouvrir dans Maps</a>
       </div>
     </div>
-  `).join('');
+  `).join('') + `
+    <div class="add-form" id="gareAddForm" style="margin-top:10px">
+      <div class="fg">
+        <input id="ga-ville" placeholder="Ville (ex: Lyon)">
+        <select id="ga-type"><option>Gare</option><option>Aéroport</option><option>Bus</option></select>
+        <div class="full"><input id="ga-nom" placeholder="Nom officiel (ex: Gare de Lyon-Part-Dieu)"></div>
+        <div class="full"><input id="ga-adresse" placeholder="Adresse complète"></div>
+        <input id="ga-phone" placeholder="Téléphone / info">
+        <input id="ga-heure" placeholder="Date / heure de passage">
+        <div class="full"><input id="ga-notes" placeholder="Notes (quai, terminal, navette…)"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-ok" onclick="confirmAddGare()">Ajouter</button>
+        <button class="btn-no" onclick="cancelAddGare()">Annuler</button>
+      </div>
+    </div>
+    <button class="add-row-btn" onclick="toggleAddGare()" style="margin-top:10px">＋ Ajouter une gare / aéroport</button>
+  `;
+  if(gareAddOpen) {
+    const f = document.getElementById('gareAddForm');
+    if(f) f.classList.add('open');
+  }
 }
 
 function gareEdit(el) {
@@ -778,6 +823,41 @@ function gareEdit(el) {
   const field = el.dataset.gfield;
   const g = state.gares.find(g=>g.id===gid);
   if(g){ g[field]=el.textContent.trim(); save(); }
+}
+
+function gareTypeChange(gid, val) {
+  const g = state.gares.find(g=>g.id===gid);
+  if(g){ g.type=val; save(); renderGares(); }
+}
+
+function delGare(gid) {
+  if(!confirm('Supprimer cette gare ?')) return;
+  state.gares = state.gares.filter(g=>g.id!==gid);
+  save(); renderGares();
+}
+
+function toggleAddGare() {
+  gareAddOpen = !gareAddOpen;
+  renderGares();
+  if(gareAddOpen) setTimeout(()=>{ const v=document.getElementById('ga-ville'); if(v){ v.scrollIntoView({behavior:'smooth',block:'center'}); v.focus(); }}, 150);
+}
+function cancelAddGare() { gareAddOpen=false; renderGares(); }
+
+function confirmAddGare() {
+  const ville = (document.getElementById('ga-ville')||{}).value.trim();
+  if(!ville) return alert('Entrez une ville');
+  state.gares.push({
+    id:      'g'+Date.now(),
+    ville,
+    type:    document.getElementById('ga-type').value,
+    nom:     document.getElementById('ga-nom').value.trim(),
+    adresse: document.getElementById('ga-adresse').value.trim(),
+    phone:   document.getElementById('ga-phone').value.trim(),
+    heure:   document.getElementById('ga-heure').value.trim(),
+    notes:   document.getElementById('ga-notes').value.trim(),
+  });
+  gareAddOpen = false;
+  save(); renderGares();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -945,11 +1025,9 @@ function renderProgramme() {
         const transColor = {Train:'#1565c0',FlixBus:'#1b5e20',Avion:'#e65100',Bus:'#6a1b9a',Voiture:'#880e4f'}[r.transport]||'#555';
         html += `<div class="prog-item" style="background:#f8f9ff;border-radius:7px;margin-bottom:4px;padding:6px 8px">
           <span class="prog-time" style="color:${transColor};font-size:1rem">${ico}</span>
-          <span class="prog-desc"><strong style="color:#1a1a2e">${r.nom}</strong><br>
-            <span style="color:var(--gray);font-size:0.7rem">
-              ${r.depart && r.depart!=='-' ? r.depart+' → '+r.arrivee+' &nbsp;·&nbsp; ' : ''}${r.notes}
-              ${r.montant ? ' &nbsp;·&nbsp; <strong style=\'color:var(--gold)\'>'+r.montant+' €</strong>' : ''}
-            </span>
+          <span class="prog-desc">
+            <strong style="color:#1a1a2e">${(r.depart && r.depart!=='-' && r.arrivee && r.arrivee!=='-') ? r.depart+' → '+r.arrivee : r.nom}</strong>
+            ${(r.notes||r.montant) ? '<br><span style="color:#888;font-size:0.7rem">'+r.notes+(r.montant ? ' &middot; <b style=\'color:var(--gold)\'>'+r.montant+' €</b>':'')+'</span>' : ''}
           </span>
         </div>`;
       });
@@ -988,11 +1066,11 @@ function renderProgramme() {
           <span class="prog-desc" style="font-size:0.76rem">${v.nom}</span>
         </div>`;
       });
-      if(mustVis.length > 4) html += `<div style="font-size:0.65rem;color:var(--gold);padding:2px 0 0 24px">+${mustVis.length-4} autres dans l2019onglet 🏛️ Visites</div>`;
+      if(mustVis.length > 4) html += `<div style="font-size:0.65rem;color:var(--gold);padding:2px 0 0 24px">+${mustVis.length-4} autres dans l’onglet 🏛️ Visites</div>`;
       html += '</div>';
     }
 
-    if(!html) html = '<div style="font-size:0.75rem;color:var(--gray);padding:6px 0">Aucune étape pour ce jour — ajoutez-en dans l2019onglet Itinéraire.</div>';
+    if(!html) html = '<div style="font-size:0.75rem;color:var(--gray);padding:6px 0">Aucune étape pour ce jour — ajoutez-en dans l’onglet Itinéraire.</div>';
 
     return `<div class="prog-card">
       <div class="prog-header" onclick="toggleDay(${day.jour})">

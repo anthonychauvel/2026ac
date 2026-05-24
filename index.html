@@ -770,7 +770,7 @@ function renderHotels() {
       </div>
     </div>
   `).join('');
-  renderAllEntityImages('hotel');
+  renderAllEntityImages('hotel').catch(()=>{});
 }
 
 function hotelEdit(el) {
@@ -899,6 +899,9 @@ function renderGares() {
   if(gareInsertAfter === '__last__') html += gareFormHTML('__last__');
 
   c.innerHTML = html;
+
+  // Charger les images des gares
+  renderAllEntityImages('gare').catch(()=>{});
 
   // Focus sur le formulaire ouvert
   if(gareInsertAfter !== null) {
@@ -1541,150 +1544,218 @@ function gareEdit(el) {
   if(g){ g[field]=el.textContent.trim(); save(); }
 }
 
-/* ══════════════════════════════════════════════════════════
-   BANQUE D'IMAGES
-══════════════════════════════════════════════════════════ */
-if(!state.images) { state.images=[]; save(); }
 
-// Compress & store image
-function pickImage(entityType, entityId) {
-  const inp = document.createElement('input');
-  inp.type='file'; inp.accept='image/*'; inp.multiple=true;
-  inp.onchange = async e => {
-    for(const file of Array.from(e.target.files||[])) {
-      await processImage(file, entityType, entityId);
-    }
-    refreshImageViews(entityType, entityId);
-  };
-  inp.click();
+/* ══════════════════════════════════════════════════════════
+   BANQUE D'IMAGES — IndexedDB (persistant, quota illimité)
+   localStorage = métadonnées uniquement (id, entityId, caption…)
+   IndexedDB     = données binaires (base64)
+══════════════════════════════════════════════════════════ */
+let _idb = null;
+
+function openIDB() {
+  if(_idb) return Promise.resolve(_idb);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('RoadTripImagesV1', 1);
+    req.onupgradeneeded = e => {
+      e.target.result.createObjectStore('blobs', {keyPath:'id'});
+    };
+    req.onsuccess = e => { _idb = e.target.result; resolve(_idb); };
+    req.onerror   = e => reject(e.target.error);
+  });
 }
 
-function processImage(file, entityType, entityId) {
-  return new Promise(resolve => {
+function idbPut(id, data) {
+  return openIDB().then(db => new Promise((res,rej)=>{
+    const tx = db.transaction('blobs','readwrite');
+    tx.objectStore('blobs').put({id, data});
+    tx.oncomplete = res; tx.onerror = e=>rej(e.target.error);
+  }));
+}
+
+function idbGet(id) {
+  return openIDB().then(db => new Promise((res,rej)=>{
+    const tx = db.transaction('blobs','readonly');
+    const req = tx.objectStore('blobs').get(id);
+    req.onsuccess = e => res(e.target.result?.data||null);
+    req.onerror   = e => rej(e.target.error);
+  }));
+}
+
+function idbDelete(id) {
+  return openIDB().then(db => new Promise((res,rej)=>{
+    const tx = db.transaction('blobs','readwrite');
+    tx.objectStore('blobs').delete(id);
+    tx.oncomplete = res; tx.onerror = e=>rej(e.target.error);
+  }));
+}
+
+// state.images stocke UNIQUEMENT les métadonnées (pas le base64)
+if(!state.images) { state.images=[]; save(); }
+
+/* ── Compression image → canvas ───────────────────────── */
+function compressImage(file, maxPx=1200, quality=0.78) {
+  return new Promise(resolve=>{
     const reader = new FileReader();
     reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX = 800;
-        let w = img.width, h = img.height;
-        if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
-        const canvas = document.createElement('canvas');
-        canvas.width=w; canvas.height=h;
-        canvas.getContext('2d').drawImage(img,0,0,w,h);
-        const data = canvas.toDataURL('image/jpeg',0.72);
-        state.images.push({
-          id: 'img'+Date.now()+Math.random().toString(36).slice(2,6),
-          entityId, entityType,
-          name: file.name,
-          data,
-          caption: '',
-          ts: Date.now()
-        });
-        try { save(); } catch(e) {
-          alert('⚠️ Stockage plein. Supprimez des photos pour en ajouter.');
-          state.images.pop();
+      const el = new Image();
+      el.onload = () => {
+        let w=el.width, h=el.height;
+        if(w>maxPx||h>maxPx){
+          if(w>h){h=Math.round(h*maxPx/w);w=maxPx;}
+          else{w=Math.round(w*maxPx/h);h=maxPx;}
         }
-        resolve();
+        const c=document.createElement('canvas');
+        c.width=w; c.height=h;
+        c.getContext('2d').drawImage(el,0,0,w,h);
+        resolve(c.toDataURL('image/jpeg',quality));
       };
-      img.src = ev.target.result;
+      el.src=ev.target.result;
     };
     reader.readAsDataURL(file);
   });
 }
 
-function getEntityImages(entityType, entityId) {
-  return (state.images||[]).filter(i=>i.entityType===entityType && i.entityId===entityId);
+/* ── Sélecteur de fichier ─────────────────────────────── */
+function pickImage(entityType, entityId) {
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.multiple=true;
+  inp.onchange = async e => {
+    const btn = document.querySelector(`[onclick="pickImage('${entityType}','${entityId}')"]`);
+    if(btn) btn.textContent='⏳ Import…';
+    for(const file of Array.from(e.target.files||[])) {
+      const id = 'img'+Date.now()+Math.random().toString(36).slice(2,6);
+      const data = await compressImage(file);
+      await idbPut(id, data);
+      state.images.push({id, entityId, entityType, name:file.name, caption:'', ts:Date.now()});
+      save();
+    }
+    await refreshImageViews(entityType, entityId);
+  };
+  inp.click();
 }
 
-function renderEntityImageGrid(entityType, entityId) {
-  const imgs = getEntityImages(entityType, entityId);
+/* ── Rendu grille ─────────────────────────────────────── */
+async function renderEntityImageGrid(entityType, entityId) {
+  const metas = (state.images||[]).filter(i=>i.entityType===entityType && i.entityId===entityId);
   const containerId = 'imgs-'+entityType+'-'+entityId;
   const c = document.getElementById(containerId);
   if(!c) return;
-  c.innerHTML = imgs.map(img=>`
+  if(!metas.length){ c.innerHTML=''; return; }
+  // Load all blobs in parallel
+  const blobs = await Promise.all(metas.map(m=>idbGet(m.id)));
+  c.innerHTML = metas.map((img,i)=> blobs[i] ? `
     <div class="img-thumb" onclick="viewImage('${img.id}')">
-      <img src="${img.data}" alt="${img.name}" loading="lazy">
+      <img src="${blobs[i]}" alt="${img.caption||img.name}" loading="lazy">
       <div class="img-cap">${img.caption||img.name}</div>
       <button class="img-del" onclick="event.stopPropagation();deleteImage('${img.id}','${entityType}','${entityId}')">✕</button>
-    </div>
-  `).join('');
+    </div>` : '').join('');
 }
 
-function renderAllEntityImages(entityType) {
+async function renderAllEntityImages(entityType) {
   const entities = entityType==='hotel' ? state.hotels : state.gares;
-  entities.forEach(e => renderEntityImageGrid(entityType, e.id));
+  for(const e of entities) await renderEntityImageGrid(entityType, e.id);
 }
 
-function refreshImageViews(entityType, entityId) {
-  renderEntityImageGrid(entityType, entityId);
-  // Update photo count badge in visites
+async function refreshImageViews(entityType, entityId) {
+  await renderEntityImageGrid(entityType, entityId);
   if(entityType==='visite') renderVisites();
+  const sec = document.getElementById('sec-imgbank');
+  if(sec && sec.classList.contains('active')) renderImageBank();
 }
 
-function deleteImage(imgId, entityType, entityId) {
+/* ── Suppression ──────────────────────────────────────── */
+async function deleteImage(imgId, entityType, entityId) {
   state.images = (state.images||[]).filter(i=>i.id!==imgId);
-  save(); refreshImageViews(entityType, entityId);
+  save();
+  await idbDelete(imgId);
+  await refreshImageViews(entityType, entityId);
 }
 
-function viewImage(imgId) {
-  const img = (state.images||[]).find(i=>i.id===imgId);
-  if(!img) return;
-  // Remove existing modal
+/* ── Vue plein écran ──────────────────────────────────── */
+async function viewImage(imgId) {
+  const meta = (state.images||[]).find(i=>i.id===imgId);
+  if(!meta) return;
+  const data = await idbGet(imgId);
+  if(!data){ alert('Image introuvable dans le stockage.'); return; }
   document.getElementById('imgModal')?.remove();
-  const modal = document.createElement('div');
+  const modal=document.createElement('div');
   modal.id='imgModal'; modal.className='img-modal';
   modal.innerHTML=`
     <button class="img-modal-close" onclick="closeImgModal()">✕</button>
-    <img src="${img.data}" alt="${img.name}">
-    <div class="img-modal-cap" contenteditable="true" onblur="saveCaption('${imgId}',this)">${img.caption||img.name}</div>
-    <button class="img-modal-del" onclick="deleteImageModal('${imgId}')">🗑 Supprimer</button>
-  `;
+    <img src="${data}" alt="${meta.name}">
+    <div class="img-modal-cap" contenteditable="true" onblur="saveCaption('${imgId}',this)"
+      style="min-width:120px">${meta.caption||meta.name}</div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="img-modal-del" onclick="deleteImageModal('${imgId}')">🗑 Supprimer</button>
+    </div>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', e=>{ if(e.target===modal) closeImgModal(); });
 }
-function closeImgModal() { document.getElementById('imgModal')?.remove(); }
+
+function closeImgModal(){ document.getElementById('imgModal')?.remove(); }
+
 function saveCaption(imgId, el) {
-  const img = (state.images||[]).find(i=>i.id===imgId);
-  if(img){ img.caption=el.textContent.trim(); save(); }
-}
-function deleteImageModal(imgId) {
-  const img = (state.images||[]).find(i=>i.id===imgId);
-  if(!img) return;
-  state.images = state.images.filter(i=>i.id!==imgId);
-  save(); closeImgModal();
-  refreshImageViews(img.entityType, img.entityId);
+  const meta=(state.images||[]).find(i=>i.id===imgId);
+  if(meta){ meta.caption=el.textContent.trim(); save(); }
 }
 
-// ── Onglet Images global (accessible depuis le menu) ──────
-function renderImageBank() {
-  const c = document.getElementById('imgbank-list');
+async function deleteImageModal(imgId) {
+  const meta=(state.images||[]).find(i=>i.id===imgId);
+  if(!meta) return;
+  state.images=state.images.filter(i=>i.id!==imgId);
+  save();
+  await idbDelete(imgId);
+  closeImgModal();
+  await refreshImageViews(meta.entityType, meta.entityId);
+}
+
+/* ── Onglet galerie globale ───────────────────────────── */
+async function renderImageBank() {
+  const c=document.getElementById('imgbank-list');
   if(!c) return;
-  const all = state.images||[];
+  const all=state.images||[];
   if(!all.length){
-    c.innerHTML='<div style="text-align:center;padding:30px;color:var(--gray)">Aucune photo importée.<br>Ajoutez des photos depuis les onglets Hôtels, Gares ou Visites.</div>';
+    c.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--gray);font-size:0.82rem">Aucune photo importée.<br><br>Ajoutez des photos depuis les onglets<br>🏨 Hôtels · 🚉 Gares · 🏛️ Visites</div>';
     return;
   }
-  // Group by entityType
-  const groups = {};
-  all.forEach(img => {
-    const key = img.entityType;
-    if(!groups[key]) groups[key]=[];
-    groups[key].push(img);
-  });
-  const typeLabel = {hotel:'🏨 Hôtels', gare:'🚉 Gares & Aéroports', visite:'🏛️ Visites'};
-  c.innerHTML = Object.entries(groups).map(([type,imgs])=>`
-    <div style="margin-bottom:16px">
-      <div class="section-title" style="font-size:0.85rem;margin-bottom:8px">${typeLabel[type]||type}</div>
-      <div class="img-grid" style="grid-template-columns:repeat(4,1fr)">${imgs.map(img=>`
-        <div class="img-thumb" onclick="viewImage('${img.id}')">
-          <img src="${img.data}" alt="${img.name}" loading="lazy">
-          <div class="img-cap">${img.caption||img.name}</div>
-          <button class="img-del" onclick="event.stopPropagation();deleteImage('${img.id}','${img.entityType}','${img.entityId}')">✕</button>
-        </div>`).join('')}
-      </div>
-    </div>
-  `).join('');
+  const groups={};
+  all.forEach(img=>{ if(!groups[img.entityType]) groups[img.entityType]=[]; groups[img.entityType].push(img); });
+  const typeLabel={hotel:'🏨 Hôtels', gare:'🚉 Gares & Aéroports', visite:'🏛️ Visites'};
+  // Build sections with lazy-loaded images
+  let html='';
+  for(const [type,imgs] of Object.entries(groups)){
+    const blobs=await Promise.all(imgs.map(m=>idbGet(m.id)));
+    html+=`<div style="margin-bottom:18px">
+      <div class="section-title" style="font-size:0.82rem;margin-bottom:8px">${typeLabel[type]||type} (${imgs.length})</div>
+      <div class="img-grid" style="grid-template-columns:repeat(4,1fr)">${
+        imgs.map((img,i)=>blobs[i]?`
+          <div class="img-thumb" onclick="viewImage('${img.id}')">
+            <img src="${blobs[i]}" alt="${img.caption||img.name}" loading="lazy">
+            <div class="img-cap">${img.caption||img.name}</div>
+            <button class="img-del" onclick="event.stopPropagation();deleteImage('${img.id}','${img.entityType}','${img.entityId}')">✕</button>
+          </div>`:'').join('')
+      }</div></div>`;
+  }
+  const total=all.length;
+  html+=`<div style="text-align:center;font-size:0.68rem;color:var(--gray);padding:8px">${total} photo${total>1?'s':''} — stockage IndexedDB persistant</div>`;
+  c.innerHTML=html;
 }
+
+// Migrer éventuelles anciennes images base64 depuis state vers IndexedDB
+(async()=>{
+  if(!state.images) return;
+  let migrated=false;
+  for(const img of state.images){
+    if(img.data){
+      await idbPut(img.id, img.data);
+      delete img.data;
+      migrated=true;
+    }
+  }
+  if(migrated){ save(); console.log('Migration images → IDB OK'); }
+})();
+
+
 
 function toggleDay(i) {
   openDays[i] = !openDays[i];
